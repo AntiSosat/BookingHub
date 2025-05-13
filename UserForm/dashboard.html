@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="dashboardStyle.css">
+</head>
+
+<body>
+    <header>
+        <div class="header">
+            <h1>Pannello di controllo</h1>
+            <div class="icons">
+                <span class="icon" aria-label="Torna alla Home"><a href="../ShopForm/shop.html">🏠</a></span>
+                <span class="icon" aria-label="Logout"><a href="../LoginForm/login-registration.html">🔓</a></span>
+            </div>
+        </div>
+    </header>
+  <main class="container">
+    <div class="main-column">
+      <section class="card">
+       <div class="card-header card-primary">Informazioni Account</div>
+       <div class="card-body" id="user-data"></div>
+      </section>
+
+      <!--Artigiano-->
+      <section class="card venditore-only">
+        <div class="card-header card-success">Gestione Prodotti</div>
+        <div class="card-body">
+          <button id="add-product" class="btn btn-primary">➕ Aggiungi Prodotto</button>
+          <button id="view-products" class="btn btn-secondary">🔍 Visualizza Prodotti</button>
+          <button id="edit-products" class="btn btn-warning">✏️ Modifica Prodotti</button>
+          <button id="delete-products" class="btn btn-danger">🗑️ Elimina Prodotti</button>
+        </div>"
+      </section>
+    </div>
+
+    
+    <div class="side-column">
+    <!--Cliente-->
+      <section class="card cliente-only">
+        <div class="card-header card-info">Storico Ordini</div>
+        <ul class="card-body" id="order-history"></ul>
+     </section>
+     
+
+     <!--Artigiano-->
+      <section class="card venditore-only">
+        <div class="card-header card-secondary">Monitoraggio Vendite</div>
+        <div class="card-body">
+          <p>📦 Articoli pubblicati: <span id="cont-prodotti">0</span></p>
+          <p>🛒 Ordini ricevuti: <span id="cont-ordini">0</span></p>
+        </div>
+      </section>
+    </div>
+
+   
+  </main>
+
+  
+
+  <script src="dashboard.js" defer></script>
+</body>
+</html>
