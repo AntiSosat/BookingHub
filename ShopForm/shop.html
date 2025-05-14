@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="shopStyle.css">
     <title>Shop Online</title>
 </head>
-
 <body>
+
     <header>
         <div class="header">
             <h1>Benvenuto nel nostro Shop Online</h1>
@@ -16,9 +15,39 @@
                 <span class="icon"><a href="../CartForm/cart.html">🛒</a></span>
                 <span class="icon"><a href="../UserForm/dashboard.html">👤</a></span>
             </div>
+
         </div>
-    </header>
-    <div class="container">
+    </div>
+</header>
+
+<div class="top-bar">
+    <span class="filtro" onclick="toggleSidebar()">🔍 Filtro</span>
+    <div class="search-box">
+        <input type="text" placeholder="Cerca prodotti...">
+        <button>Cerca</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <aside class="sidebar-slide" id="filtriBox">
+        <h1>Filtri:</h1><br>
+        <h2>Categoria</h2>
+        <label>Uomo<input type="checkbox" id="genereUomo"></input><br>
+        <label>Donna</label><input type="checkbox" id="genereDonna"></input><br>
+        <label>Bambino</label><input type="checkbox" id="genereBambino"></input><br>
+        <label>Bambina</label><input type="checkbox" id="genereBambina"></input><br>
+        <label>UniSex</label><input type="checkbox" id="genereUni"></input><br><br>
+        <h2>Prezzo</h2>
+        <label>Prezzo Crescente</label><input type="checkbox" id="prezzoCrescente"></input><br>
+        <label>Prezzo decrescente</label><input type="checkbox" id="prezzoDecrescente"></input><br><br>
+        <h2>Disponibilità</h2>
+        <label>Disponibili Ora</label><input type="checkbox" id="disponibilità"></input><br><br>
+        
+        <h2>Artigiano:</h2>
+        <label>kudvgwiyh</label><input type="checkbox" id="art1"></input><br>
+    </aside>
+
+    <div class="prodotti" id="prodotti">
         <div class="product" onclick="location.href='../LoginForm/login-registration.html'">
             <img src="https://via.placeholder.com/300" alt="Prodotto 1">
             <h3>Prodotto 1</h3>
@@ -26,36 +55,50 @@
             <p><strong>€19.99</strong></p>
             <button>Aggiungi al carrello</button>
         </div>
-        <div class="product">
-            <img src="https://via.placeholder.com/300" alt="Prodotto 2">
-            <h3>Prodotto 2</h3>
-            <p>Descrizione del prodotto 2.</p>
-            <p><strong>€29.99</strong></p>
+        <div class="product" onclick="location.href='../LoginForm/login-registration.html'">
+            <img src="https://via.placeholder.com/300" alt="Prodotto 1">
+            <h3>Prodotto 1</h3>
+            <p>Descrizione del prodotto 1.</p>
+            <p><strong>€19.99</strong></p>
             <button>Aggiungi al carrello</button>
         </div>
-        <div class="product">
-            <img src="https://via.placeholder.com/300" alt="Prodotto 3">
-            <h3>Prodotto 3</h3>
-            <p>Descrizione del prodotto 3.</p>
-            <p><strong>€39.99</strong></p>
+        <div class="product" onclick="location.href='../LoginForm/login-registration.html'">
+            <img src="https://via.placeholder.com/300" alt="Prodotto 1">
+            <h3>Prodotto 1</h3>
+            <p>Descrizione del prodotto 1.</p>
+            <p><strong>€19.99</strong></p>
             <button>Aggiungi al carrello</button>
         </div>
-        <div class="product">
-            <img src="https://via.placeholder.com/300" alt="Prodotto 2">
-            <h3>Prodotto 2</h3>
-            <p>Descrizione del prodotto 2.</p>
-            <p><strong>€29.99</strong></p>
+        <div class="product" onclick="location.href='../LoginForm/login-registration.html'">
+            <img src="https://via.placeholder.com/300" alt="Prodotto 1">
+            <h3>Prodotto 1</h3>
+            <p>Descrizione del prodotto 1.</p>
+            <p><strong>€19.99</strong></p>
             <button>Aggiungi al carrello</button>
         </div>
-        <div class="product">
-            <img src="https://via.placeholder.com/300" alt="Prodotto 3">
-            <h3>Prodotto 3</h3>
-            <p>Descrizione del prodotto 3.</p>
-            <p><strong>€39.99</strong></p>
+        <div class="product" onclick="location.href='../LoginForm/login-registration.html'">
+            <img src="https://via.placeholder.com/300" alt="Prodotto 1">
+            <h3>Prodotto 1</h3>
+            <p>Descrizione del prodotto 1.</p>
+            <p><strong>€19.99</strong></p>
+            <button>Aggiungi al carrello</button>
+        </div>
+        <div class="product" onclick="location.href='../LoginForm/login-registration.html'">
+            <img src="https://via.placeholder.com/300" alt="Prodotto 1">
+            <h3>Prodotto 1</h3>
+            <p>Descrizione del prodotto 1.</p>
+            <p><strong>€19.99</strong></p>
             <button>Aggiungi al carrello</button>
         </div>
     </div>
-</body>
-
-</html>
 </div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById("filtriBox");
+    sidebar.classList.toggle("attivo");
+}
+</script>
+
+</body>
+</html>
