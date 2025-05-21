@@ -7,7 +7,7 @@ app.use(express.json());
 // Connessione al database
 const client = new Client({
   user: 'postgres.ajexsiyipavyjrkseedr',
-  host: 'aws-0-eu-central-1.pooler.supabase.com',
+  host: 'aws-0-eu-centralgit-1.pooler.supabase.com',
   database: 'E-commerce',
   password: 'Sviluppo2025',
   port: 6543,
@@ -16,6 +16,8 @@ const client = new Client({
 client.connect()
   .then(() => console.log('Connesso al database!'))
   .catch(err => console.error('Errore di connessione', err));
+
+
 
 
 
@@ -59,14 +61,34 @@ async function getProdottiByPrezzo(prezzo) {
   return result.rows;
 }
 
+async function getProdottiByCategoria(categoria) {
+  const result = await client.query('SELECT nome FROM prodotti WHERE categoria = $1', [categoria]);
+  return result.rows;
+}
+
+async function getProdottiByDisponibilita(disponibilita) {
+  const result = await client.query('SELECT nome FROM prodotti WHERE disponibilita = $1', [disponibilita]);
+  return result.rows;
+}
+
+async function getProdottiByNome(nome) {
+  const result = await client.query('SELECT nome FROM prodotti WHERE nome ILIKE $1', [`%${nome}%`]);
+  return result.rows;
+}
+
+
+
+
 
 
 
 
 async function getProdotti() {
-  const result = await client.query('SELECT * FROM prodotti');
+  const result = await client.query('SELECT nome FROM prodotti');
   return result.rows;
 }
+
+
 
 async function getImmagineProdotto(idprodotto) {
   const result = await client.query('SELECT immagine FROM prodotti WHERE id = $1', [idprodotto]);
@@ -142,16 +164,22 @@ async function getEmailArtigiano(id) {
 // Funzioni per aggiungere dati
 
 
-async function aggiungiArtigiano(id, IVA, numeroTel, email) {
-  // Controlla se esiste già un artigiano con questo id
+
+async function aggiungiArtigiano(id, IVA, numeroTel, email, password) {
   const check = await client.query('SELECT 1 FROM artigiano WHERE id = $1', [id]);
   if (check.rowCount > 0) {
     return { message: `Esiste già un artigiano con id ${id} 🌸` };
   }
-  const query = 'INSERT INTO artigiano (id, IVA, numeroTel, email) VALUES ($1, $2, $3, $4) RETURNING *';
-  const result = await client.query(query, [id, IVA, numeroTel, email]);
-  return result.rows[0];
+
+  const queryArtigiano = 'INSERT INTO artigiano (id, IVA, numeroTel, email) VALUES ($1, $2, $3, $4) RETURNING *';
+  const resultArtigiano = await client.query(queryArtigiano, [id, IVA, numeroTel, email]);
+
+  const queryLogin = 'INSERT INTO login (email, password, tipo) VALUES ($1, $2, $3)';
+  await client.query(queryLogin, [email, password, 'artigiano']);
+
+  return resultArtigiano.rows[0];
 }
+
 
 async function aggiungiProdotto(id, categoria, prezzo, disponibilita, idVenditore, nome, immagine) {
   // Controlla se esiste già un prodotto con questo id
@@ -169,16 +197,23 @@ async function aggiungiProdotto(id, categoria, prezzo, disponibilita, idVenditor
   return result.rows[0];
 }
 
-async function aggiungiCliente(id, nome, cognome, email, data_nascita) {
-  // Controlla se esiste già un cliente con questo id
+async function aggiungiCliente(id, nome, cognome, email, data_nascita, password) {
   const check = await client.query('SELECT 1 FROM cliente WHERE id = $1', [id]);
   if (check.rowCount > 0) {
     return { message: `Esiste già un cliente con id ${id} 💖` };
   }
-  const query = 'INSERT INTO cliente (id, nome, cognome, email, data_nascita) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-  const result = await client.query(query, [id, nome, cognome, email, data_nascita]);
-  return result.rows[0];
+
+  // Inserisci nella tabella cliente
+  const queryCliente = 'INSERT INTO cliente (id, nome, cognome, email, data_nascita) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+  const resultCliente = await client.query(queryCliente, [id, nome, cognome, email, data_nascita]);
+
+  // Inserisci nella tabella login
+  const queryLogin = 'INSERT INTO login (email, password, tipo) VALUES ($1, $2, $3)';
+  await client.query(queryLogin, [email, password, 'cliente']);
+
+  return resultCliente.rows[0];
 }
+
 
 async function aggiungiOrdine(id, cliente, venditore, prodotto, quantita) {
   // Controlla se esiste già un ordine con questo id
@@ -197,8 +232,31 @@ async function eliminaArtigiano(id) {
 }
 
 async function loginCliente(email, password) {
-  const result = await client.query('SELECT * FROM cliente WHERE email = $1 AND password = $2', [email, password]);
-  return result.rows[0];
+  const result = await client.query(
+    'SELECT 1 FROM login WHERE email = $1 AND password = $2',
+    [email, password]
+  );
+  return result.rowCount > 0;
+}
+
+
+
+async function loginArtigiano(email, password, iva) {
+  const result = await client.query(
+    'SELECT 1 FROM login WHERE email = $1 AND password = $2', 
+    [email, password]
+  );
+
+  // Controlla se esiste un login con questa email e password
+  if (result.rowCount === 0) return false;
+
+  // Controlla se esiste un artigiano con questa email e partita IVA
+  const artigianoResult = await client.query(
+    'SELECT 1 FROM artigiano WHERE email = $1 AND iva = $2', 
+    [email, iva]
+  );
+
+  return artigianoResult.rowCount > 0;
 }
 
 
@@ -207,22 +265,8 @@ async function loginCliente(email, password) {
 
 
 
-// Rotte Express
 
-app.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const cliente = await loginCliente(email, password);
-    if (cliente) {
-      res.json(cliente);
-    } else {
-      res.status(401).json({ error: 'Credenziali non valide' });
-    }
-  } catch (err) {
-    console.error('Errore nella login', err);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
+
 
 app.get('/ordine/cliente', async (req, res) => {
   try {
@@ -545,6 +589,56 @@ app.get('/artigiano/email', async (req, res) => {
   res.json({ email: result[0].email });
 });
 
+app.get('/prodotto/categoria', async (req, res) => {
+  const categoria = req.query.categoria;
+  if (!categoria) {
+    return res.status(400).json({ error: 'Parametro "categoria" mancante ' });
+  }
+
+  const result = await getProdottiByCategoria(categoria);
+  if (result.length === 0) {
+    return res.status(404).json({ error: 'Nessun prodotto trovato per questa categoria' });
+  }
+
+  res.json(result);
+});
+
+app.get('prodotto/disponibilita', async (req, res) => {
+  const disponibilita = req.query.disponibilita;
+
+  // Controlla se il parametro è assente
+  if (disponibilita === undefined) {
+    return res.status(400).json({ error: 'Parametro "disponibilita" mancante' });
+  }
+
+  // Controlla se disponibilita è uguale a "0"
+  if (disponibilita === '0') {
+    return res.status(404).json({ error: 'Nessun prodotto disponibile (disponibilità = 0)' });
+  }
+
+  const result = await getProdottiByDisponibilita(disponibilita);
+  if (result.length === 0) {
+    return res.status(404).json({ error: 'Nessun prodotto trovato per questa disponibilità' });
+  }
+
+  res.json(result);
+});
+
+app.get('/prodotto/nome', async (req, res) => {
+  const nome = req.query.nome;
+  if (!nome) {
+    return res.status(400).json({ error: 'Parametro "nome" mancante ' });
+  }
+
+  const result = await getProdottiByNome(nome);
+  if (result.length === 0) {
+    return res.status(404).json({ error: 'Nessun prodotto trovato con questo nome' });
+  }
+
+  res.json(result);
+});
+
+
 
 
 
@@ -564,7 +658,6 @@ module.exports = {
   getProdottiByPrezzo,
   aggiungiArtigiano,
   eliminaArtigiano,
-  loginCliente,
   aggiungiProdotto,
   aggiungiOrdine,
   aggiungiCliente,
@@ -585,4 +678,11 @@ module.exports = {
   getIVAArtigiano,
   getNumeroTelArtigiano,
   getEmailArtigiano,
+
+  loginArtigiano,
+  loginCliente,
+  getProdottiByCategoria,
+  getProdottiByDisponibilita,
+  getProdottiByNome,
+  getProdottiByPrezzo
 };
