@@ -7,8 +7,8 @@ app.use(express.json());
 // Connessione al database
 const client = new Client({
   user: 'postgres.ajexsiyipavyjrkseedr',
-  host: 'aws-0-eu-centralgit-1.pooler.supabase.com',
-  database: 'E-commerce',
+  host: 'aws-0-eu-central-1.pooler.supabase.com',
+  database: 'postgres',
   password: 'Sviluppo2025',
   port: 6543,
 });
@@ -16,13 +16,6 @@ const client = new Client({
 client.connect()
   .then(() => console.log('Connesso al database!'))
   .catch(err => console.error('Errore di connessione', err));
-
-
-
-
-
-
-
 
 // Funzioni get
 
