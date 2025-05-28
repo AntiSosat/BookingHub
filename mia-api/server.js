@@ -1,6 +1,6 @@
 const express = require('express');
 const { Client } = require('pg');
-
+const path = require('path');
 const app = express();
 app.use(express.json());
 
@@ -16,7 +16,7 @@ const client = new Client({
 client.connect()
   .then(() => console.log('Connesso al database!'))
   .catch(err => console.error('Errore di connessione', err));
-
+app.use(express.static(path.join(__dirname, '..')));
 // Funzioni get
 
 async function getOrdiniCliente(clienteId) {
@@ -633,7 +633,9 @@ app.get('/prodotto/nome', async (req, res) => {
 
 
 
-
+app.get('/', (req, res) => {
+  res.redirect('/loginForm/login-registration.html');
+});
 
 
 
