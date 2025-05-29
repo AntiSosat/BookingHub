@@ -6,6 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const wishContainer = document.querySelector(".wish-list");
   const emptyMessage = document.querySelector(".cart-empty");
   const totalElement = document.getElementById("cart-total");
+  const checkoutButton = document.getElementById("checkout-button");
+  const popup = document.getElementById("payment-popup");
+  const popupSummary = document.getElementById("popup-summary");
+  const closePopup = document.getElementById("close-popup");
 
   // Mostra o nasconde messaggio di carrello vuoto
   if (cart.length === 0) {
@@ -48,7 +52,40 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Interazioni future: puoi aggiungere eventi per gestire i pulsanti
+
+  checkoutButton.addEventListener("click", () => {
+  // Svuota contenuto popup
+  popupSummary.innerHTML = "";
+
+  if (cart.length === 0) {
+    popupSummary.innerHTML = "<li>Il carrello è vuoto.</li>";
+  } else {
+    let total = 0;
+    cart.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = `${item.name} x${item.quantity} - € ${(item.price * item.quantity).toFixed(2)}`;
+      popupSummary.appendChild(li);
+      total += item.price * item.quantity;
+    });
+
+    // Totale finale
+    const totalItem = document.createElement("li");
+    totalItem.style.fontWeight = "bold";
+    totalItem.textContent = `Totale: € ${total.toFixed(2)}`;
+    popupSummary.appendChild(totalItem);
+  }
+
+  popup.classList.remove("hidden");
 });
+
+closePopup.addEventListener("click", () => {
+  popup.classList.add("hidden");
+});
+
+
+});
+
+
 
 /*
 f12 > console 

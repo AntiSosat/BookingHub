@@ -1,91 +1,184 @@
-document.addEventListener("DOMContentLoaded", function () {
-    // --- TEST LOCALE ---
-    // Imposta il ruolo da console per simulare un utente
-    // Esempio: localStorage.setItem("role", "cliente");
+document.addEventListener("DOMContentLoaded", () => {
+  const role = localStorage.getItem("role");
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+  let prodotti = JSON.parse(localStorage.getItem("prodotti")) || [];
+  const ordini = JSON.parse(localStorage.getItem("ordini")) || [];
 
-    const role = localStorage.getItem("role");
+  const userSection = document.getElementById("user-data");
+  const orderList = document.getElementById("order-history");
+  const contProdotti = document.getElementById("cont-prodotti");
+  const contOrdini = document.getElementById("cont-ordini");
 
-    // Recupera i dati utente (opzionale per test visuali)
-    const userData = JSON.parse(localStorage.getItem("user")) || {};
-    const ordini = JSON.parse(localStorage.getItem("ordini")) || [];
-    const prodotti = JSON.parse(localStorage.getItem("prodotti")) || [];
+  const popup = document.getElementById("popup-prodotti");
+  const popupTitle = document.getElementById("popup-title");
+  const popupClose = document.getElementById("popup-close");
+  const listaProdotti = document.getElementById("lista-prodotti");
 
-    // Mostra le informazioni utente (se presenti)
-    const userSection = document.getElementById("user-data");
-    if (userSection && userData.nome) {
-        userSection.innerHTML = `
-            <p><strong>Nome:</strong> ${userData.nome}</p>
-            <p><strong>Cognome:</strong> ${userData.cognome}</p>
-            <p><strong>Email:</strong> ${userData.email}</p>
-        `;
+  const formAggiungi = document.getElementById("form-aggiungi");
+  const formModifica = document.getElementById("form-modifica");
+  const inputNomeNuovo = document.getElementById("nome-nuovo");
+  const inputPrezzoNuovo = document.getElementById("prezzo-nuovo");
+  const inputModNome = document.getElementById("mod-nome");
+  const inputModPrezzo = document.getElementById("mod-prezzo");
+  const btnSalvaNuovo = document.getElementById("btn-salva-nuovo");
+  const btnSalvaModifica = document.getElementById("btn-salva-modifica");
+
+  let prodottoInModificaIndex = null;
+
+  if (user && user.nome && userSection) {
+    userSection.innerHTML = `
+      <p><strong>Nome:</strong> ${user.nome}</p>
+      <p><strong>Cognome:</strong> ${user.cognome}</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+    `;
+  }
+
+  if (role === "cliente") {
+    toggleSezioni("cliente");
+    popolaStoricoOrdini();
+  } else if (role === "venditore") {
+    toggleSezioni("venditore");
+    aggiornaContatori();
+    setupBottoniGestioneProdotti();
+  } else {
+    window.location.href = "../LoginForm/login-registration.html";
+  }
+
+  function toggleSezioni(ruolo) {
+    document.querySelectorAll(".cliente-only").forEach(el => el.style.display = ruolo === "cliente" ? "block" : "none");
+    document.querySelectorAll(".venditore-only").forEach(el => el.style.display = ruolo === "venditore" ? "block" : "none");
+  }
+
+  function popolaStoricoOrdini() {
+    if (!orderList) return;
+    orderList.innerHTML = "";
+    ordini.forEach(order => {
+      const li = document.createElement("li");
+      li.textContent = `🧾 ${order.prodotto} - ${order.data}`;
+      orderList.appendChild(li);
+    });
+  }
+
+  function aggiornaContatori() {
+    if (contProdotti) contProdotti.textContent = prodotti.length;
+    if (contOrdini) contOrdini.textContent = ordini.length;
+  }
+
+  function salvaProdotti() {
+    localStorage.setItem("prodotti", JSON.stringify(prodotti));
+    aggiornaContatori();
+  }
+
+  function setupBottoniGestioneProdotti() {
+    document.getElementById("add-product").addEventListener("click", () => mostraPopup("Aggiungi"));
+    document.getElementById("view-products").addEventListener("click", () => mostraPopup("Visualizza"));
+    document.getElementById("edit-products").addEventListener("click", () => mostraPopup("Modifica"));
+    document.getElementById("delete-products").addEventListener("click", () => mostraPopup("Elimina"));
+    popupClose.addEventListener("click", () => popup.classList.add("hidden"));
+  }
+
+  btnSalvaNuovo.addEventListener("click", () => {
+    const nome = inputNomeNuovo.value.trim();
+    const prezzo = parseFloat(inputPrezzoNuovo.value);
+    if (nome && !isNaN(prezzo)) {
+      prodotti.push({ nome, prezzo });
+      salvaProdotti();
+      inputNomeNuovo.value = "";
+      inputPrezzoNuovo.value = "";
+      mostraPopup("Aggiungi");
     }
+  });
 
-    if (role === "cliente") {
-        // Mostra solo sezione cliente
-        document.querySelectorAll(".venditore-only").forEach(el => el.style.display = "none");
-        document.querySelectorAll(".cliente-only").forEach(el => el.style.display = "block");
-
-        // Popola lo storico ordini
-        const orderList = document.getElementById("order-history");
-        if (orderList) {
-            orderList.innerHTML = "";
-            ordini.forEach(order => {
-                const li = document.createElement("li");
-                li.textContent = `🧾 ${order.prodotto} - ${order.data}`;
-                orderList.appendChild(li);
-            });
-        }
-    } else if (role === "venditore") {
-        // Mostra solo sezione venditore
-        document.querySelectorAll(".cliente-only").forEach(el => el.style.display = "none");
-        document.querySelectorAll(".venditore-only").forEach(el => el.style.display = "block");
-
-        // Popola contatori prodotti e ordini ricevuti
-        document.getElementById("cont-prodotti").textContent = prodotti.length;
-        document.getElementById("cont-ordini").textContent = ordini.length;
-    } else {
-        // Nessun ruolo: reindirizza al login
-        window.location.href = "../LoginForm/login-registration.html";
+  btnSalvaModifica.addEventListener("click", () => {
+    const nome = inputModNome.value.trim();
+    const prezzo = parseFloat(inputModPrezzo.value);
+    if (nome && !isNaN(prezzo) && prodottoInModificaIndex !== null) {
+      prodotti[prodottoInModificaIndex] = { nome, prezzo };
+      salvaProdotti();
+      formModifica.style.display = "none";
+      mostraPopup("Modifica");
     }
+  });
+
+function mostraPopup(modalità) {
+  popupTitle.textContent = `${modalità} Prodotti`;
+  listaProdotti.innerHTML = "";
+  formAggiungi.style.display = "none";
+  formModifica.style.display = "none";
+  prodottoInModificaIndex = null;
+
+  // Mostra lista sempre uguale
+  prodotti.forEach(prod => {
+    const row = document.createElement("div");
+    row.style.marginBottom = "0.5rem";
+    row.textContent = `${prod.nome} - €${prod.prezzo.toFixed(2)}`;
+    listaProdotti.appendChild(row);
+  });
+
+  // Modalità: Aggiungi
+  if (modalità === "Aggiungi") {
+    formAggiungi.style.display = "block";
+
+  // Modalità: Modifica
+  } else if (modalità === "Modifica") {
+    // Dropdown + bottone
+    formModifica.style.display = "block";
+    const select = document.createElement("select");
+    select.style.width = "100%";
+    select.style.marginBottom = "0.5rem";
+    prodotti.forEach((prod, index) => {
+      const option = document.createElement("option");
+      option.value = index;
+      option.textContent = `${prod.nome} - €${prod.prezzo.toFixed(2)}`;
+      select.appendChild(option);
+    });
+    formModifica.insertBefore(select, inputModNome);
+
+    select.addEventListener("change", () => {
+      const idx = parseInt(select.value);
+      inputModNome.value = prodotti[idx].nome;
+      inputModPrezzo.value = prodotti[idx].prezzo;
+      prodottoInModificaIndex = idx;
+    });
+
+    select.dispatchEvent(new Event("change")); // inizializza con primo valore
+
+  // Modalità: Elimina
+  } else if (modalità === "Elimina") {
+    const form = document.createElement("div");
+    form.style.marginTop = "1rem";
+    form.style.borderTop = "1px solid #ccc";
+    form.style.paddingTop = "1rem";
+
+    const select = document.createElement("select");
+    select.style.width = "100%";
+    select.style.marginBottom = "0.5rem";
+
+    prodotti.forEach((prod, index) => {
+      const option = document.createElement("option");
+      option.value = index;
+      option.textContent = `${prod.nome} - €${prod.prezzo.toFixed(2)}`;
+      select.appendChild(option);
+    });
+
+    const btnElimina = document.createElement("button");
+    btnElimina.textContent = "Elimina";
+    btnElimina.className = "btn btn-danger";
+    btnElimina.style.width = "100%";
+
+    btnElimina.addEventListener("click", () => {
+      const idx = parseInt(select.value);
+      prodotti.splice(idx, 1);
+      localStorage.setItem("prodotti", JSON.stringify(prodotti));
+      mostraPopup("Elimina");
+    });
+
+    form.appendChild(select);
+    form.appendChild(btnElimina);
+    listaProdotti.appendChild(form);
+  }
+
+  popup.classList.remove("hidden");
+}
+
 });
-
-/*
-f12 > console
-venditore
-localStorage.setItem("role", "venditore");
-localStorage.setItem("user", JSON.stringify({
-  nome: "Mario",
-  cognome: "Rossi",
-  email: "mario.rossi@example.com"
-}));
-
-localStorage.setItem("prodotti", JSON.stringify([
-  { id: 1, nome: "Collana", prezzo: 20.99 },
-  { id: 2, nome: "Bracciale", prezzo: 14.50 }
-]));
-
-localStorage.setItem("ordini", JSON.stringify([
-  { id: 101, cliente: "Anna", prodotto: "Collana", data: "2025-05-10" }
-]));
-
-location.reload(); // Ricarica la pagina
-
-cliente
-localStorage.setItem("role", "cliente");
-localStorage.setItem("user", JSON.stringify({
-  nome: "Giulia",
-  cognome: "Neri",
-  email: "giulia.neri@example.com"
-}));
-
-localStorage.setItem("ordini", JSON.stringify([
-  { id: 1, prodotto: "Anello in oro", data: "2025-05-08" },
-  { id: 2, prodotto: "Bracciale", data: "2025-05-12" }
-]));
-
-location.reload(); // Ricarica la pagina
-
-cancellare
-localStorage.clear();
-location.reload();
-*/
