@@ -23,7 +23,7 @@ document.getElementById("registrazioneAzienda").addEventListener("submit", async
             const result = await response.json();
             {
                 if (result.success) {
-                    window.location.href = "../ShopForm/shop.html";
+                    window.location.href = "../ShopForm/shop.html?id=${email}";
                 } 
             }
         } catch (error) {
@@ -58,7 +58,7 @@ document.getElementById("registrazioneCliente").addEventListener("submit", async
             const result = await response.json();
             {
                 if (result.success) {
-                    window.location.href = "../ShopForm/shop.html";
+                    window.location.href = "../ShopForm/shop.html?id=${email}";
                 } 
             }
         } catch (error) {

@@ -19,7 +19,7 @@ document.getElementById("login-cliente").addEventListener("submit", async functi
                 document.getElementById("pass").reset();
                 alert(result.message);
             }else{
-                window.location.href = "../ShopForm/shop.html";
+                window.location.href = "../ShopForm/shop.html?id=${email}";
             }
         }
     } catch (error) {
@@ -51,7 +51,7 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
                 document.getElementById("pIva").reset();
                 alert(result.message);
             }else{
-                window.location.href = "../ShopForm/shop.html";
+                window.location.href = "../ShopForm/shop.html?id=${email}";
             }
         }
     } catch (error) {

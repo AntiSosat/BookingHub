@@ -40,10 +40,6 @@ async function getVenditoriOrdine(ordineId) {
 }
 
 
-
-
-
-
 async function getProdottiArtigiano(artigianoId) {
   const result = await client.query('SELECT * FROM prodotti WHERE idvenditore = $1', [artigianoId]);
   return result.rows;
@@ -70,25 +66,18 @@ async function getProdottiByNome(nome) {
 }
 
 
-
-
-
-
-
-
 async function getProdotti() {
-  const result = await client.query('SELECT nome FROM prodotti');
+  const result = await client.query('SELECT * FROM prodotti');
   return result.rows;
 }
-
 
 
 async function getImmagineProdotto(idprodotto) {
   const result = await client.query('SELECT immagine FROM prodotti WHERE id = $1', [idprodotto]);
   return result.rows;
 }
-async function getNomeProdotto(idprodotto) {
-  const result = await client.query('SELECT nome FROM prodotti WHERE id = $1', [idprodotto]);
+async function getProdottobyId(idprodotto) {
+  const result = await client.query('SELECT * FROM prodotti WHERE id = $1', [idprodotto]);
   return result.rows;
 }
 
@@ -112,9 +101,6 @@ async function getCategoriaProdotto(idprodotto) {
   return result.rows;
 }
 
-
-
-
 async function getNomeCliente(id) {
   const result = await client.query('SELECT nome FROM cliente WHERE id = $1', [id]);
   return result.rows;
@@ -136,10 +122,6 @@ async function getDataNascitaCliente(id) {
 }
 
 
-
-
-
-
 async function getIVAArtigiano(id) {
   const result = await client.query('SELECT IVA FROM artigiano WHERE id = $1', [id]);
   return result.rows;
@@ -155,8 +137,6 @@ async function getEmailArtigiano(id) {
   return result.rows;
 }
 // Funzioni per aggiungere dati
-
-
 
 app.post('/artigianiRegistrazione', async (req, res) => {
   const { id, IVA, numeroTel, email, password } = req.body;
@@ -208,7 +188,7 @@ app.post('/registrazioneCliente', async (req, res) => {
   try {
     const check = await client.query('SELECT 1 FROM cliente WHERE id = $1', [id]);
     if (check.rowCount > 0) {
-      return res.status(400).json({ message: `Esiste già un cliente con id ${id} 💖` });
+      return res.json({ message: `Esiste già un cliente con id ${id} ` });
     }
 
     const queryCliente = `
@@ -225,7 +205,7 @@ app.post('/registrazioneCliente', async (req, res) => {
     return res.status(201).json(resultCliente.rows[0]);
   } catch (error) {
     console.error('Errore durante inserimento cliente:', error);
-    res.status(500).json({ error: 'Errore del server.' });
+    res.json({ error: 'Errore del server.' });
   }
 });
 
@@ -265,9 +245,6 @@ app.post('/loginCliente', async (req, res) => {
     return res.json({ error: 'Errore del server' });
   }
 });
-
-
-
 
 app.post('/loginArtigiano', async (req, res) => {
   const { email, password, iva } = req.query;
@@ -333,11 +310,11 @@ app.get('/prodotti', async (req, res) => {
     res.json(prodotti);
   } catch (err) {
     console.error('Errore nella query prodotti', err);
-    res.status(500).json({ error: 'Errore interno del server' });
+    res.status(500).json({ success:false,message: 'Errore interno del server' });
   }
 });
 
-app.get('/prodotti', async (req, res) => {
+app.get('/prodottiPrezzo', async (req, res) => {
   try {
     const prezzo = req.query.prezzo;
     const prodotti = await getProdottiByPrezzo(prezzo);
@@ -373,7 +350,7 @@ app.get('/prodotto/immagine', async (req, res) => {
   }
 });
 
-app.get('/prodotto/nome', async (req, res) => {
+app.get('/prodottobyId', async (req, res) => {
   try {
     const id = req.query.id;
     if (!id) {
@@ -386,7 +363,7 @@ app.get('/prodotto/nome', async (req, res) => {
       return res.status(404).json({ error: 'Prodotto non trovato ' });
     }
 
-    res.json({ nome: result[0].nome });
+    res.json({ dati: result});
 
   } catch (err) {
     console.error('Errore nel recupero del nome prodotto ', err);
