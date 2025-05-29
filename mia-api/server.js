@@ -158,20 +158,32 @@ async function getEmailArtigiano(id) {
 
 
 
-async function aggiungiArtigiano(id, IVA, numeroTel, email, password) {
-  const check = await client.query('SELECT 1 FROM artigiano WHERE id = $1', [id]);
-  if (check.rowCount > 0) {
-    return { message: `Esiste già un artigiano con id ${id} 🌸` };
+app.post('/artigianiRegistrazione', async (req, res) => {
+  const { id, IVA, numeroTel, email, password } = req.body;
+
+  try {
+    const check = await client.query('SELECT 1 FROM artigiano WHERE id = $1', [id]);
+    if (check.rowCount > 0) {
+      return res.status(400).json({ message: `Esiste già un artigiano con id ${id}` });
+    }
+
+    const queryArtigiano = `
+      INSERT INTO artigiano (id, IVA, numeroTel, email)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *`;
+    const resultArtigiano = await client.query(queryArtigiano, [id, IVA, numeroTel, email]);
+
+    const queryLogin = `
+      INSERT INTO login (email, password, tipo)
+      VALUES ($1, $2, $3)`;
+    await client.query(queryLogin, [email, password, 'artigiano']);
+
+    return res.json({success:true});
+  } catch (error) {
+    console.error('Errore durante inserimento:', error);
+    res.json({ error: 'Errore del server.' });
   }
-
-  const queryArtigiano = 'INSERT INTO artigiano (id, IVA, numeroTel, email) VALUES ($1, $2, $3, $4) RETURNING *';
-  const resultArtigiano = await client.query(queryArtigiano, [id, IVA, numeroTel, email]);
-
-  const queryLogin = 'INSERT INTO login (email, password, tipo) VALUES ($1, $2, $3)';
-  await client.query(queryLogin, [email, password, 'artigiano']);
-
-  return resultArtigiano.rows[0];
-}
+});
 
 
 async function aggiungiProdotto(id, categoria, prezzo, disponibilita, idVenditore, nome, immagine) {
@@ -190,22 +202,32 @@ async function aggiungiProdotto(id, categoria, prezzo, disponibilita, idVenditor
   return result.rows[0];
 }
 
-async function aggiungiCliente(id, nome, cognome, email, data_nascita, password) {
-  const check = await client.query('SELECT 1 FROM cliente WHERE id = $1', [id]);
-  if (check.rowCount > 0) {
-    return { message: `Esiste già un cliente con id ${id} 💖` };
+app.post('/registrazioneCliente', async (req, res) => {
+  const { id, nome, cognome, email, data_nascita, password } = req.body;
+
+  try {
+    const check = await client.query('SELECT 1 FROM cliente WHERE id = $1', [id]);
+    if (check.rowCount > 0) {
+      return res.status(400).json({ message: `Esiste già un cliente con id ${id} 💖` });
+    }
+
+    const queryCliente = `
+      INSERT INTO cliente (id, nome, cognome, email, data_nascita)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *`;
+    const resultCliente = await client.query(queryCliente, [id, nome, cognome, email, data_nascita]);
+
+    const queryLogin = `
+      INSERT INTO login (email, password, tipo)
+      VALUES ($1, $2, $3)`;
+    await client.query(queryLogin, [email, password, 'cliente']);
+
+    return res.status(201).json(resultCliente.rows[0]);
+  } catch (error) {
+    console.error('Errore durante inserimento cliente:', error);
+    res.status(500).json({ error: 'Errore del server.' });
   }
-
-  // Inserisci nella tabella cliente
-  const queryCliente = 'INSERT INTO cliente (id, nome, cognome, email, data_nascita) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-  const resultCliente = await client.query(queryCliente, [id, nome, cognome, email, data_nascita]);
-
-  // Inserisci nella tabella login
-  const queryLogin = 'INSERT INTO login (email, password, tipo) VALUES ($1, $2, $3)';
-  await client.query(queryLogin, [email, password, 'cliente']);
-
-  return resultCliente.rows[0];
-}
+});
 
 
 async function aggiungiOrdine(id, cliente, venditore, prodotto, quantita) {
@@ -224,42 +246,59 @@ async function eliminaArtigiano(id) {
   return result.rowCount > 0;
 }
 
-async function loginCliente(email, password) {
-  const result = await client.query(
-    'SELECT 1 FROM login WHERE email = $1 AND password = $2',
-    [email, password]
-  );
-  return result.rowCount > 0;
-}
+app.post('/loginCliente', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    // Verifica se esiste un login valido
+    const result = await client.query(
+      'SELECT * FROM public.login WHERE email = $1 AND password = $2',
+      [email, password]
+    );
 
-
-
-async function loginArtigiano(email, password, iva) {
-  const result = await client.query(
-    'SELECT 1 FROM login WHERE email = $1 AND password = $2', 
-    [email, password]
-  );
-
-  // Controlla se esiste un login con questa email e password
-  if (result.rowCount === 0) return false;
-
-  // Controlla se esiste un artigiano con questa email e partita IVA
-  const artigianoResult = await client.query(
-    'SELECT 1 FROM artigiano WHERE email = $1 AND iva = $2', 
-    [email, iva]
-  );
-
-  return artigianoResult.rowCount > 0;
-}
+    if (result.rowCount > 0) {
+      return res.json({ success: true });
+    } else {
+      return res.json({ success: false, message: 'Credenziali non valide' });
+    }
+  } catch (err) {
+    console.error('Errore loginCliente:', err);
+    return res.json({ error: 'Errore del server' });
+  }
+});
 
 
 
 
+app.post('/loginArtigiano', async (req, res) => {
+  const { email, password, iva } = req.query;
 
+  try {
+    // Verifica se esiste l'utente nel login
+    const loginResult = await client.query(
+      'SELECT 1 FROM login WHERE email = $1 AND password = $2',
+      [email, password]
+    );
 
+    if (loginResult.rowCount === 0) {
+      return res.status(401).json({ success: false, message: 'Credenziali non valide' });
+    }
 
+    // Verifica se è un artigiano valido
+    const artigianoResult = await client.query(
+      'SELECT 1 FROM artigiano WHERE email = $1 AND iva = $2',
+      [email, iva]
+    );
 
-
+    if (artigianoResult.rowCount > 0) {
+      return res.json({ success: true });
+    } else {
+      return res.json({ success: false, message: 'Non sei registrato come artigiano' });
+    }
+  } catch (err) {
+    console.error('Errore loginArtigiano:', err);
+    return res.json({ error: 'Errore del server' });
+  }
+});
 
 app.get('/ordine/cliente', async (req, res) => {
   try {
@@ -327,7 +366,7 @@ app.get('/prodotto/immagine', async (req, res) => {
     //jpeg in png se serve
     res.set('Content-Type', 'image/jpeg');
     res.send(Buffer.from(immagineBase64, 'base64'));
-    
+
   } catch (err) {
     console.error('Errore nel recupero dell\'immagine ', err);
     res.status(500).json({ error: 'Errore interno del server ' });
@@ -673,9 +712,6 @@ module.exports = {
   getIVAArtigiano,
   getNumeroTelArtigiano,
   getEmailArtigiano,
-
-  loginArtigiano,
-  loginCliente,
   getProdottiByCategoria,
   getProdottiByDisponibilita,
   getProdottiByNome,
