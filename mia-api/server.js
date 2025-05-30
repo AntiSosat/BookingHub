@@ -231,10 +231,9 @@ app.post('/loginCliente', async (req, res) => {
   try {
     // Verifica se esiste un login valido
     const result = await client.query(
-      'SELECT * FROM public.login WHERE email = $1 AND password = $2',
+      'SELECT * FROM login WHERE email = $1 AND password = $2',
       [email, password]
     );
-
     if (result.rowCount > 0) {
       return res.json({ success: true });
     } else {
@@ -667,14 +666,11 @@ module.exports = {
   getOrdiniCliente,
   getProdottiArtigiano,
   getProdottiByPrezzo,
-  aggiungiArtigiano,
   eliminaArtigiano,
   aggiungiProdotto,
   aggiungiOrdine,
-  aggiungiCliente,
   getProdotti,
   getImmagineProdotto,
-  getNomeProdotto,
   getPrezzoProdotto,
   getDisponibilitaProdotto,
   getVenditoreProdotto,

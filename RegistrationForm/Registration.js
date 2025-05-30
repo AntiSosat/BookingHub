@@ -18,13 +18,13 @@ document.getElementById("registrazioneAzienda").addEventListener("submit", async
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ nomeAzienda, iva, telefono ,email, password })
+                body: JSON.stringify({ nomeAzienda, iva, telefono, email, password })
             })
             const result = await response.json();
             {
                 if (result.success) {
                     window.location.href = "../ShopForm/shop.html?id=${email}";
-                } 
+                }
             }
         } catch (error) {
 
@@ -35,6 +35,7 @@ document.getElementById("registrazioneAzienda").addEventListener("submit", async
 
 document.getElementById("registrazioneCliente").addEventListener("submit", async function (event) {
     event.preventDefault();
+    console.log("Registrazione cliente in corso...");
     const id = Math.random();
     const nome = document.getElementById("nome").value;
     const cognome = document.getElementById("cognome").value;
@@ -42,9 +43,11 @@ document.getElementById("registrazioneCliente").addEventListener("submit", async
     const email = document.getElementById("email").value;
     const password = document.getElementById("pass").value;
     const confermaPassword = document.getElementById("passFinale").value;
-    if (password !== confermaPassword) {
+    console.log(id, nome, cognome, datatNascita, email, password, confermaPassword);
+    if (password != confermaPassword) {
         alert("Le password non corrispondono");
-        return;
+        document.getElementById("pass").value = "";
+        document.getElementById("passFinale").value = "";
     } else {
 
         try {
@@ -53,16 +56,17 @@ document.getElementById("registrazioneCliente").addEventListener("submit", async
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ id, nome, cognome ,email, datatNascita, password})
+                body: JSON.stringify({ id, nome, cognome, email, datatNascita, password })
             })
             const result = await response.json();
-            {
-                if (result.success) {
-                    window.location.href = "../ShopForm/shop.html?id=${email}";
-                } 
+            if (result.success) {
+                window.location.href = `../ShopForm/shop.html?id=${email}`;
+            } else {
+                alert("Registrazione fallita");
             }
         } catch (error) {
-
+            console.error("Errore durante la registrazione:", error);
+            alert("Si è verificato un errore. Riprova più tardi.");
         }
     }
 
