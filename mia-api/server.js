@@ -21,48 +21,48 @@ app.use(express.static(path.join(__dirname, '..')));
 
 async function getOrdiniCliente(clienteId) {
   const result = await client.query('SELECT id FROM ordine WHERE cliente = $1', [clienteId]);
-  return result.rows;
+  return result.rows.map(row => row.id);
 }
 
 async function getProdottiOrdine(clienteId, ordineId) {
   const result = await client.query('SELECT prodotto FROM ordine WHERE cliente = $1 AND id = $2', [clienteId, ordineId]);
-  return result.rows;
+  return result.rows.map(row => row.prodotto);
 }
 
 async function getClientOrdine(ordineId) {
   const result = await client.query('SELECT cliente FROM ordine WHERE id = $1', [ordineId]);
-  return result.rows;
+  return result.rows.map(row => row.cliente);
 }
 
 async function getVenditoriOrdine(ordineId) {
   const result = await client.query('SELECT venditore FROM ordine WHERE id = $1', [ordineId]);
-  return result.rows;
+  return result.rows.map(row => row.venditore);
 }
 
 
 async function getProdottiArtigiano(artigianoId) {
   const result = await client.query('SELECT * FROM prodotti WHERE idvenditore = $1', [artigianoId]);
-  return result.rows;
+  return result.rows.map(row => row.nome);  
 }
 
 async function getProdottiByPrezzo(prezzo) {
   const result = await client.query('SELECT * FROM prodotti WHERE prezzo = $1', [prezzo]);
-  return result.rows;
+  return result.rows.map(row => row.nome);
 }
 
 async function getProdottiByCategoria(categoria) {
   const result = await client.query('SELECT nome FROM prodotti WHERE categoria = $1', [categoria]);
-  return result.rows;
+  return result.rows.map(row => row.nome);
 }
 
 async function getProdottiByDisponibilita(disponibilita) {
   const result = await client.query('SELECT nome FROM prodotti WHERE disponibilita = $1', [disponibilita]);
-  return result.rows;
+  return result.rows.map(row => row.nome);
 }
 
 async function getProdottiByNome(nome) {
   const result = await client.query('SELECT nome FROM prodotti WHERE nome ILIKE $1', [`%${nome}%`]);
-  return result.rows;
+  return result.rows.map(row => row.nome);
 }
 
 
@@ -71,72 +71,118 @@ async function getProdotti() {
   return result.rows;
 }
 
+async function getDescrizioneProdotto(idprodotto) {
+  const result = await client.query('SELECT descrizione FROM prodotti WHERE id = $1', [idprodotto]);
+  return result.rows.map(row => row.descrizione);
+}
+
 
 async function getImmagineProdotto(idprodotto) {
   const result = await client.query('SELECT immagine FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows;
-}
-async function getProdottobyId(idprodotto) {
-  const result = await client.query('SELECT * FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows;
+  return result.rows.map(row => row.immagine);
 }
 
 async function getPrezzoProdotto(idprodotto) {
   const result = await client.query('SELECT prezzo FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows;
+  return result.rows.map(row => row.prezzo);
 }
 
 async function getDisponibilitaProdotto(idprodotto) {
   const result = await client.query('SELECT disponibilita FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows;
+  return result.rows.map(row => row.disponibilita);
 }
 
 async function getVenditoreProdotto(idprodotto) {
   const result = await client.query('SELECT idvenditore FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows;
+  return result.rows.map(row => row.idvenditore);
 }
 
 async function getCategoriaProdotto(idprodotto) {
   const result = await client.query('SELECT categoria FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows;
+  return result.rows.map(row => row.categoria);
 }
 
 async function getNomeCliente(id) {
   const result = await client.query('SELECT nome FROM cliente WHERE id = $1', [id]);
-  return result.rows;
+  return result.rows.map(row => row.nome);
 }
 
 async function getCognomeCliente(id) {
   const result = await client.query('SELECT cognome FROM cliente WHERE id = $1', [id]);
-  return result.rows;
+  return result.rows.map(row => row.cognome);
 }
 
 async function getEmailCliente(id) {
   const result = await client.query('SELECT email FROM cliente WHERE id = $1', [id]);
-  return result.rows;
+  return result.rows.map(row => row.email);
 }
 
 async function getDataNascitaCliente(id) {
   const result = await client.query('SELECT data_nascita FROM cliente WHERE id = $1', [id]);
-  return result.rows;
+  return result.rows.map(row => row.data_nascita);
 }
 
 
 async function getIVAArtigiano(id) {
-  const result = await client.query('SELECT IVA FROM artigiano WHERE id = $1', [id]);
-  return result.rows;
+  const result = await client.query('SELECT iva FROM artigiano WHERE id = $1', [id]);
+  return result.rows.map(row => row.iva);
 }
 
 async function getNumeroTelArtigiano(id) {
   const result = await client.query('SELECT numeroTel FROM artigiano WHERE id = $1', [id]);
-  return result.rows;
+  return result.rows.map(row => row.numeroTel);
 }
 
 async function getEmailArtigiano(id) {
   const result = await client.query('SELECT email FROM artigiano WHERE id = $1', [id]);
-  return result.rows;
+  return result.rows.map(row => row.email);
 }
+
+async function getProdottiCart(clienteId) {
+  const result = await client.query('SELECT idProdotto FROM carrello WHERE idCliente = $1', [clienteId]);
+  return result.rows.map(row => row.idProdotto);
+}
+
 // Funzioni per aggiungere dati
+app.get('/Cart/idProdotti', async (req, res) => {
+  try {
+    const clienteId = req.query.cliente;
+    if (!clienteId) {
+      return res.status(400).json({ error: 'Parametro "cliente" mancante' });
+    }
+
+    const cart = await getCart(clienteId);
+    res.json(cart); 
+  } catch (err) {
+    console.error('Errore nella query carrello', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+app.post('/cart/modificaQuantita', async (req, res) => {
+  try {
+    const { clienteId, prodottoId, quantita } = req.body;
+
+    if (!clienteId || !prodottoId || quantita === undefined) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
+    const query = `
+      UPDATE carrello
+      SET quantita = $1
+      WHERE idCliente = $2 AND idProdotto = $3
+      RETURNING *`;
+    const result = await client.query(query, [quantita, clienteId, prodottoId]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Prodotto non trovato nel carrello' });
+    }
+
+    res.json({ success: true, carrello: result.rows[0] });
+  } catch (error) {
+    console.error('Errore nella modifica quantità carrello:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
 
 app.post('/artigianiRegistrazione', async (req, res) => {
   const { id, IVA, numeroTel, email, password } = req.body;
@@ -166,21 +212,26 @@ app.post('/artigianiRegistrazione', async (req, res) => {
 });
 
 
-async function aggiungiProdotto(id, categoria, prezzo, disponibilita, idVenditore, nome, immagine) {
-  // Controlla se esiste già un prodotto con questo id
-  const checkProdotto = await client.query('SELECT 1 FROM prodotti WHERE id = $1', [id]);
-  if (checkProdotto.rowCount > 0) {
-    return { message: `Esiste già un prodotto con id ${id} 🌼` };
+app.post('/aggiungiProdotto', async (req, res) => {
+  try {
+    const { id, categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione } = req.body;
+
+    // Chiama la funzione che hai già scritto
+    const result = await aggiungiProdotto(id, categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione);
+
+    // Se la funzione restituisce un messaggio (es. prodotto già esistente)
+    if (result.message) {
+      return res.status(400).json({ error: result.message });
+    }
+
+    // Tutto ok, restituisci il prodotto creato
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Errore durante l\'aggiunta del prodotto:', error.message);
+    res.status(500).json({ error: 'Errore interno del server.' });
   }
-  // Controllo che il venditore (artigiano) esista
-  const checkVenditore = await client.query('SELECT 1 FROM artigiano WHERE id = $1', [idVenditore]);
-  if (checkVenditore.rowCount === 0) {
-    throw new Error(`Il venditore con ID ${idVenditore} non esiste 🌸`);
-  }
-  const query = 'INSERT INTO prodotti (id, categoria, prezzo, disponibilita, idVenditore, nome, immagine) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *';
-  const result = await client.query(query, [id, categoria, prezzo, disponibilita, idVenditore, nome, immagine]);
-  return result.rows[0];
-}
+});
+
 
 app.post('/registrazioneCliente', async (req, res) => {
   const { id, nome, cognome, email, data_nascita, password } = req.body;
@@ -210,21 +261,45 @@ app.post('/registrazioneCliente', async (req, res) => {
 });
 
 
-async function aggiungiOrdine(id, cliente, venditore, prodotto, quantita) {
-  // Controlla se esiste già un ordine con questo id
-  const check = await client.query('SELECT 1 FROM ordine WHERE id = $1', [id]);
-  if (check.rowCount > 0) {
-    return { message: `Esiste già un ordine con id ${id} ✨` };
-  }
-  const query = 'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-  const result = await client.query(query, [id, cliente, venditore, prodotto, quantita]);
-  return result.rows[0];
-}
+app.post('/aggiungiOrdine', async (req, res) => {
+  try {
+    const { id, cliente, venditore, prodotto, quantita } = req.body;
 
-async function eliminaArtigiano(id) {
-  const result = await client.query('DELETE FROM artigiano WHERE id = $1 RETURNING *', [id]);
-  return result.rowCount > 0;
-}
+    const result = await aggiungiOrdine(id, cliente, venditore, prodotto, quantita);
+
+    if (result.message) {
+      return res.status(400).json({ error: result.message });
+    }
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Errore durante l\'aggiunta ordine:', error.message);
+    res.status(500).json({ error: 'Errore interno del server.' });
+  }
+});
+
+
+app.post('/eliminaArtigiano', async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Parametro "id" mancante' });
+    }
+
+    const successo = await eliminaArtigiano(id);
+
+    if (!successo) {
+      return res.status(404).json({ error: `Artigiano con id ${id} non trovato` });
+    }
+
+    res.json({ success: true, message: `Artigiano con id ${id} eliminato` });
+  } catch (error) {
+    console.error('Errore durante eliminazione artigiano:', error.message);
+    res.status(500).json({ error: 'Errore interno del server.' });
+  }
+});
+
 
 app.post('/loginCliente', async (req, res) => {
   const { email, password } = req.body;
@@ -314,7 +389,7 @@ app.get('/prodotti', async (req, res) => {
   }
 });
 
-app.get('/prodottiPrezzo', async (req, res) => {
+app.get('/prodotti/prezzo', async (req, res) => {
   try {
     const prezzo = req.query.prezzo;
     const prodotti = await getProdottiByPrezzo(prezzo);
@@ -647,7 +722,19 @@ app.get('/prodotto/nome', async (req, res) => {
   res.json(result);
 });
 
+app.get('/prodotti/descrizione', async (req, res) => {
+  const id = req.query.id;
+  if (!id) {
+    return res.status(400).json({ error: 'Parametro "id" mancante ' });
+  } 
 
+  const result = await getDescrizioneProdotto(id);
+  if (result.length === 0) {
+    return res.status(404).json({ error: 'Nessun prodotto trovato con questo id' });
+  }
+
+  res.json(result);
+});
 
 app.get('/', (req, res) => {
   res.redirect('/loginForm/login-registration.html');
@@ -667,14 +754,8 @@ module.exports = {
   getOrdiniCliente,
   getProdottiArtigiano,
   getProdottiByPrezzo,
-  aggiungiArtigiano,
-  eliminaArtigiano,
-  aggiungiProdotto,
-  aggiungiOrdine,
-  aggiungiCliente,
   getProdotti,
   getImmagineProdotto,
-  getNomeProdotto,
   getPrezzoProdotto,
   getDisponibilitaProdotto,
   getVenditoreProdotto,
@@ -692,5 +773,6 @@ module.exports = {
   getProdottiByCategoria,
   getProdottiByDisponibilita,
   getProdottiByNome,
-  getProdottiByPrezzo
+  getProdottiByPrezzo,
+  getProdottiCart
 };
