@@ -1,6 +1,7 @@
 const express = require('express');
 const { Client } = require('pg');
 const path = require('path');
+const { get } = require('http');
 const app = express();
 app.use(express.json());
 
@@ -774,5 +775,6 @@ module.exports = {
   getProdottiByDisponibilita,
   getProdottiByNome,
   getProdottiByPrezzo,
-  getProdottiCart
+  getProdottiCart,
+  getDescrizioneProdotto,
 };
