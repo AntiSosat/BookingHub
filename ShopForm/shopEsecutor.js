@@ -1,9 +1,9 @@
-const id = getParametro(id);
+const email = getParametro();
 
 
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('id');
+    return urlParams.get('email');
 }
 
 function toggleSidebar() {
@@ -11,66 +11,79 @@ function toggleSidebar() {
     sidebar.classList.toggle("attivo");
 }
 
+function accountPersonale(){
+    location.href = `../UserForm/dashboard.html?email=${email}`; 
+}
+function carrelloPersonale(){
+    location.href = `../CartForm/cart.html?email=${email}`; 
+}
+
+function aggiuntaProdottoCarrello(idProdotto, email) {
+    fetch("/aggiungiProdotto", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ idProdotto, email })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Prodotto aggiunto al carrello con successo!");
+        } else {
+            alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
+        }
+    })
+    .catch(error => {
+        alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async function () {
-    prodottoSpecifico = await restituisciTuttiProdotti();
-    const wrapper = document.getElementById("product-wrapper");
+const prodotti = await restituisciTuttiProdotti();
+    if (prodotti.length > 0) {
+        Object.values(prodotti).forEach(prodotto => {
+            const prodottiContainer = document.getElementById("prodotti");
 
-    // Crea il contenitore principale
-    const container = document.createElement("div");
-    container.className = "container";
+            // Crea il div principale del prodotto
+            const productDiv = document.createElement("div");
+            productDiv.className = "product";
+            productDiv.onclick = () => {
+                location.href = `infoProdottoSpec.html?id=${prodotto.id},${email}`; // Reindirizza alla pagina delle specifiche del prodotto
+            };
 
-    // Sezione immagine
-    const imageSection = document.createElement("div");
-    imageSection.className = "image-section";
-    const img = document.createElement("img");
-    img.src = prodottoSpecifico.immagine;
-    img.alt = "Nome del Prodotto";
-    imageSection.appendChild(img);
+            // Crea e aggiungi l'immagine
+            const img = document.createElement("img");
+            img.src = prodotto.immagine;
+            img.alt = prodotto.nome;
+            productDiv.appendChild(img);
 
-    // Sezione dettagli
-    const detailsSection = document.createElement("div");
-    detailsSection.className = "details-section";
+            // Titolo
+            const h3 = document.createElement("h3");
+            h3.textContent = prodotto.nome;
+            productDiv.appendChild(h3);
 
-    const title = document.createElement("h1");
-    title.textContent = prodottoSpecifico.nome;
+            // Prezzo
+            const price = document.createElement("p");
+            price.innerHTML = `<strong>${prodotto.prezzo}</strong>`;
+            productDiv.appendChild(price);
 
-    const brand = document.createElement("p");
-    brand.innerHTML = "<strong>Marchio:</strong> ${prodottoSpecifico.idVenditore}";
+            // Bottone
+            const btn = document.createElement("button");
+            btn.textContent = "Aggiungi al carrello";//Aggiungere funzionalità per aggiungere al carrello
+            btn.onclick = (event) => {
+                aggiuntaProdottoCarrello(prodotto.id, email);
+            }
+            productDiv.appendChild(btn);
 
-    const color = document.createElement("p");
-    color.innerHTML = "<strong>Categoria:</strong> ${prodottoSpecifico.categoria}";
-
-    const description = document.createElement("p");
-    description.innerHTML = "<strong>Descrizione:</strong> ${prodottoSpecifico.descrizione}";
-    description.className = "description";
-
-    const price = document.createElement("p");
-    price.className = "price";
-    price.textContent = prodottoSpecifico.prezzo + " €";
-
-    // Pulsante acquisto
-    const buySection = document.createElement("div");
-    buySection.className = "buy-section";
-    const button = document.createElement("button");
-    button.textContent = "Aggiungi al Carrello";
-
-    buySection.appendChild(button);
-
-    // Appendi tutto alla sezione dettagli
-    detailsSection.appendChild(title);
-    detailsSection.appendChild(brand);
-    detailsSection.appendChild(color);
-    detailsSection.appendChild(description);
-    detailsSection.appendChild(price);
-    detailsSection.appendChild(buySection);
-
-    // Appendi le sezioni al container principale
-    container.appendChild(imageSection);
-    container.appendChild(detailsSection);
-
-    // Infine, appendi il container alla pagina
-    wrapper.appendChild(container);
+            // Aggiungi tutto al contenitore
+            prodottiContainer.appendChild(productDiv);
+        })
+    }
 });
+
+
+    
 async function restituisciTuttiProdotti() {
     try {
         const response = await fetch("/prodotti", {

@@ -20,7 +20,7 @@
                             <div class="section text-center">
                                 <h4 class="mb-4 pb-3">Registrazione Azienda</h4>
                                 <div class="form-group mt-2">
-                                    <input type="text" class="form-style" id=" nomeAz" placeholder="Nome Azienda">
+                                    <input type="text" class="form-style" id="nomeAz" placeholder="Nome Azienda">
                                     <i class="input-icon uil uil-user"></i>
                                 </div>
                                 <div class="form-group mt-2">
@@ -40,7 +40,8 @@
                                     <i class="input-icon uil uil-lock-alt"></i>
                                 </div>
                                 <div class="form-group mt-2">
-                                    <input type="password" class="form-style" id="passFin" placeholder="Conferma Password">
+                                    <input type="password" class="form-style" id="passFin"
+                                        placeholder="Conferma Password">
                                     <i class="input-icon uil uil-lock-alt"></i>
                                 </div>
                                 <button type="submit" class="btn mt-4">Registrati</button>
@@ -52,7 +53,44 @@
             </div>
         </div>
     </div>
-    
-<script src="Registration.js"></script>
+
+    <script>
+        document.getElementById("registrazioneAzienda").addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const nomeAzienda = document.getElementById("nomeAz").value;
+            const IVA = document.getElementById("pIva").value;
+            const telefono = document.getElementById("numTel").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("pass").value;
+            const confermaPassword = document.getElementById("passFin").value;
+            if (password !== confermaPassword) {
+                alert("Le password non corrispondono");
+                return;
+            } else {
+
+                try {
+                    const response = await fetch("/artigianiRegistrazione", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ nomeAzienda, IVA, telefono, email, password })
+                    })
+                    const result = await response.json();
+                    {
+                        if (result.success) {
+                            window.location.href = `../ShopForm/shop.html?id=${email}`;
+                        }else{
+                            alert(result.message)
+                        }
+                    }
+                } catch (error) {
+                alert("Errore durante la registrazione. Riprova più tardi.");
+                }
+            }
+
+        })
+    </script>
 </body>
+
 </html>

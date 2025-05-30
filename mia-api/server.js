@@ -104,43 +104,43 @@ async function getCategoriaProdotto(idprodotto) {
 }
 
 async function getNomeCliente(id) {
-  const result = await client.query('SELECT nome FROM cliente WHERE id = $1', [id]);
+  const result = await client.query('SELECT nome FROM cliente WHERE email = $1', [email]);
   return result.rows.map(row => row.nome);
 }
 
 async function getCognomeCliente(id) {
-  const result = await client.query('SELECT cognome FROM cliente WHERE id = $1', [id]);
+  const result = await client.query('SELECT cognome FROM cliente WHERE email = $1', [email]);
   return result.rows.map(row => row.cognome);
 }
 
 async function getEmailCliente(id) {
-  const result = await client.query('SELECT email FROM cliente WHERE id = $1', [id]);
+  const result = await client.query('SELECT email FROM cliente WHERE email = $1', [email]);
   return result.rows.map(row => row.email);
 }
 
 async function getDataNascitaCliente(id) {
-  const result = await client.query('SELECT data_nascita FROM cliente WHERE id = $1', [id]);
+  const result = await client.query('SELECT data_nascita FROM cliente WHERE email = $1', [email]);
   return result.rows.map(row => row.data_nascita);
 }
 
 
 async function getIVAArtigiano(id) {
-  const result = await client.query('SELECT iva FROM artigiano WHERE id = $1', [id]);
+  const result = await client.query('SELECT iva FROM artigiano WHERE iva = $1', [iva]);
   return result.rows.map(row => row.iva);
 }
 
 async function getNumeroTelArtigiano(id) {
-  const result = await client.query('SELECT numeroTel FROM artigiano WHERE id = $1', [id]);
+  const result = await client.query('SELECT numeroTel FROM artigiano WHERE iva = $1', [iva]);
   return result.rows.map(row => row.numeroTel);
 }
 
 async function getEmailArtigiano(id) {
-  const result = await client.query('SELECT email FROM artigiano WHERE id = $1', [id]);
+  const result = await client.query('SELECT email FROM artigiano WHERE iva = $1', [iva]);
   return result.rows.map(row => row.email);
 }
 
 async function getProdottiCart(clienteId) {
-  const result = await client.query('SELECT idProdotto FROM carrello WHERE idCliente = $1', [clienteId]);
+  const result = await client.query('SELECT idProdotto FROM Cart WHERE emailCliente = $1', [clienteId]);
   return result.rows.map(row => row.idProdotto);
 }
 
@@ -186,24 +186,24 @@ app.post('/cart/modificaQuantita', async (req, res) => {
 });
 
 app.post('/artigianiRegistrazione', async (req, res) => {
-  const { id, IVA, numeroTel, email, password } = req.body;
+  const { nomeAzienda, IVA, telefono, email, password } = req.body;
 
   try {
-    const check = await client.query('SELECT 1 FROM artigiano WHERE id = $1', [id]);
+    const check = await client.query('SELECT 1 FROM login WHERE email = $1', [email]);
     if (check.rowCount > 0) {
-      return res.status(400).json({ message: `Esiste già un artigiano con id ${id}` });
+      return res.status(400).json({ message: `Esiste già un artigiano con email uguale a : ${email}` });
     }
-
-    const queryArtigiano = `
-      INSERT INTO artigiano (id, IVA, numeroTel, email)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *`;
-    const resultArtigiano = await client.query(queryArtigiano, [id, IVA, numeroTel, email]);
 
     const queryLogin = `
       INSERT INTO login (email, password, tipo)
       VALUES ($1, $2, $3)`;
     await client.query(queryLogin, [email, password, 'artigiano']);
+
+    const queryArtigiano = `
+      INSERT INTO artigiano (iva, numeroTel, email,nomeAzienda)
+      VALUES ($1, $2, $3,$4)
+      RETURNING *`;
+    const resultArtigiano = await client.query(queryArtigiano, [IVA, telefono, email,nomeAzienda]);
 
     return res.json({success:true});
   } catch (error) {
@@ -235,31 +235,51 @@ app.post('/aggiungiProdotto', async (req, res) => {
 
 
 app.post('/registrazioneCliente', async (req, res) => {
-  const { id, nome, cognome, email, data_nascita, password } = req.body;
-
+  const { nome, cognome, email, dataNascita, password } = req.body;
   try {
-    const check = await client.query('SELECT 1 FROM cliente WHERE id = $1', [id]);
+    const check = await client.query('SELECT 1 FROM login WHERE email = $1', [email]);
     if (check.rowCount > 0) {
-      return res.json({ message: `Esiste già un cliente con id ${id} ` });
+      return res.json({ message: `Esiste già un cliente con email ${email} ` });
     }
-
-    const queryCliente = `
-      INSERT INTO cliente (id, nome, cognome, email, data_nascita)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`;
-    const resultCliente = await client.query(queryCliente, [id, nome, cognome, email, data_nascita]);
-
     const queryLogin = `
       INSERT INTO login (email, password, tipo)
       VALUES ($1, $2, $3)`;
     await client.query(queryLogin, [email, password, 'cliente']);
 
-    return res.status(201).json(resultCliente.rows[0]);
+    const queryCliente = `
+      INSERT INTO cliente (nome, cognome, email, data_nascita)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *`;
+      
+    const resultCliente = await client.query(queryCliente, [nome, cognome, email, dataNascita]);
+
+    return res.json({success: true});
   } catch (error) {
     console.error('Errore durante inserimento cliente:', error);
     res.json({ error: 'Errore del server.' });
   }
 });
+
+app.post('/aggiungiProdotto', async (req, res) => {
+  var quantita=1;
+  const {idProd,email} = req.body;
+  try {
+    const result = await client.query(
+      'INSERT INTO cart (idprodotto,quantita, emailCliente) VALUES ($1, $2,$3) RETURNING *',
+      [idProd,quantita, email]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(400).json({ error: 'Errore nell\'aggiunta del prodotto al carrello' });
+    }
+
+    res.status(201).json({ success: true, cartItem: result.rows[0] });
+  } catch (error) {
+    console.error('Errore durante l\'aggiunta del prodotto al carrello:', error);
+    res.status(500).json({ error: 'Errore interno del server.' });
+  }
+});
+
 
 
 app.post('/aggiungiOrdine', async (req, res) => {

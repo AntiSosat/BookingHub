@@ -28,7 +28,8 @@
                                     <i class="input-icon uil uil-user"></i>
                                 </div>
                                 <div class="form-group mt-2">
-                                    <input type="date" class="form-style" id="dataNascita" placeholder="Data Di Nascita">
+                                    <input type="date" class="form-style" id="dataNascita"
+                                        placeholder="Data Di Nascita">
                                     <i class="input-icon uil uil-calendar-alt"></i>
                                 </div>
                                 <div class="form-group mt-2">
@@ -40,7 +41,8 @@
                                     <i class="input-icon uil uil-lock-alt"></i>
                                 </div>
                                 <div class="form-group mt-2">
-                                    <input type="password" class="form-style" id="passFinale" placeholder="Conferma Password">
+                                    <input type="password" class="form-style" id="passFinale"
+                                        placeholder="Conferma Password">
                                     <i class="input-icon uil uil-lock-alt"></i>
                                 </div>
                                 <button type="submit" class="btn mt-4">Registrati</button>
@@ -51,8 +53,46 @@
             </div>
         </div>
     </div>
-    
-    <script src="Registration.js"></script>
+    <script>
+        document.getElementById("registrazioneCliente").addEventListener("submit", async function (event) {
+            event.preventDefault();
+            console.log("Registrazione cliente in corso...");
+            const nome = document.getElementById("nome").value;
+            const cognome = document.getElementById("cognome").value;
+            const dataNascita = document.getElementById("dataNascita").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("pass").value;
+            const confermaPassword = document.getElementById("passFinale").value;
+            console.log(nome, cognome, dataNascita, email, password, confermaPassword);
+            if (password != confermaPassword) {
+                alert("Le password non corrispondono");
+                document.getElementById("pass").value = "";
+                document.getElementById("passFinale").value = "";
+            } else {
+
+                try {
+                    const response = await fetch("/registrazioneCliente", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ nome, cognome, email, dataNascita, password })
+                    })
+                    const result = await response.json();
+                    console.log("Risposta dal server:", result);
+                    if (result.success) {
+                        window.location.href = `../ShopForm/shop.html?id=${email}`;
+                    } else {
+                        alert(result.message);
+                    }
+                } catch (error) {
+                    console.error("Errore durante la registrazione:", error);
+                    alert("Si è verificato un errore. Riprova più tardi.");
+                }
+            }
+
+        });
+    </script>
 </body>
 
 </html>
