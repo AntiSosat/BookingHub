@@ -140,7 +140,7 @@ async function getEmailArtigiano(id) {
 }
 
 async function getProdottiCart(clienteId) {
-  const result = await client.query('SELECT idProdotto FROM Cart WHERE emailCliente = $1', [clienteId]);
+  const result = await client.query('SELECT idprodotto FROM cart WHERE emailcliente = $1', [clienteId]); //da sql emailcliente 
   return result.rows.map(row => row.idProdotto);
 }
 
@@ -152,7 +152,7 @@ app.get('/Cart/idProdotti', async (req, res) => {
       return res.status(400).json({ error: 'Parametro "cliente" mancante' });
     }
 
-    const cart = await getCart(clienteId);
+    const cart = await getProdottiCart(clienteId); 
     res.json(cart); 
   } catch (err) {
     console.error('Errore nella query carrello', err);

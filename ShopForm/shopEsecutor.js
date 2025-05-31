@@ -3,7 +3,8 @@ const email = getParametro();
 
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('email');
+    const email = urlParams.get('email') || urlParams.get('id');
+    return (email && email !== "null") ? email : null;
 }
 
 function toggleSidebar() {
@@ -12,10 +13,12 @@ function toggleSidebar() {
 }
 
 function accountPersonale(){
-    location.href = `../UserForm/dashboard.html?email=${email}`; 
+    console.log("EMAIL PRIMA DEL REDIRECT DASHBOARD:", email);   //non ancora testato ma credo sia la stessa cosa di sotto , `../UserForm/dashboard.html?email=${email}
+    location.href = `../UserForm/dashboard.html?id=${email}`; 
 }
 function carrelloPersonale(){
-    location.href = `../CartForm/cart.html?email=${email}`; 
+    console.log("EMAIL PRIMA DEL REDIRECT:", email);  //ora ok funziona, prima dava null con sotto  ../CartForm/cart.html?email=${email}
+    location.href = `../CartForm/cart.html?id=${email}`; 
 }
 
 function aggiuntaProdottoCarrello(idProdotto, email) {
