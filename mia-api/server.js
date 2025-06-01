@@ -103,12 +103,12 @@ async function getCategoriaProdotto(idprodotto) {
   return result.rows.map(row => row.categoria);
 }
 
-async function getNomeCliente(id) {
+async function getNomeCliente(email) { //id
   const result = await client.query('SELECT nome FROM cliente WHERE email = $1', [email]);
   return result.rows.map(row => row.nome);
 }
 
-async function getCognomeCliente(id) {
+async function getCognomeCliente(email) { //id
   const result = await client.query('SELECT cognome FROM cliente WHERE email = $1', [email]);
   return result.rows.map(row => row.cognome);
 }
@@ -125,17 +125,17 @@ async function getDataNascitaCliente(id) {
 
 
 async function getIVAArtigiano(id) {
-  const result = await client.query('SELECT iva FROM artigiano WHERE iva = $1', [iva]);
+  const result = await client.query('SELECT iva FROM artigiano WHERE iva = $1', [iva]); //da fare con id
   return result.rows.map(row => row.iva);
 }
 
 async function getNumeroTelArtigiano(id) {
-  const result = await client.query('SELECT numeroTel FROM artigiano WHERE iva = $1', [iva]);
-  return result.rows.map(row => row.numeroTel);
+  const result = await client.query('SELECT numerotel FROM artigiano WHERE iva = $1', [iva]); //da fare con id
+  return result.rows.map(row => row.numerotel);
 }
 
 async function getEmailArtigiano(id) {
-  const result = await client.query('SELECT email FROM artigiano WHERE iva = $1', [iva]);
+  const result = await client.query('SELECT email FROM artigiano WHERE iva = $1', [iva]); //da fare con id
   return result.rows.map(row => row.email);
 }
 
@@ -600,7 +600,7 @@ app.get('/prodotto/categoria', async (req, res) => {
 });
 
 
-app.get('ordine/prodotti', async (req, res) => {
+app.get('/ordine/prodotti', async (req, res) => {
   try {
     const clienteId = req.query.cliente;
     const ordineId = req.query.ordine;
@@ -655,7 +655,7 @@ app.get('/cliente/nome', async (req, res) => {
     return res.status(404).json({ error: 'Cliente non trovato ' });
   }
 
-  res.json({ nome: result[0].nome });
+  res.json({ nome: result[0] }); //.nome
 });
 
 app.get('/cliente/cognome', async (req, res) => {
@@ -669,8 +669,8 @@ app.get('/cliente/cognome', async (req, res) => {
     return res.status(404).json({ error: 'Cliente non trovato ' });
   }
 
-  res.json({ cognome: result[0].cognome });
-});
+  res.json({ cognome: result[0] }); //.cognome
+ });
 
 app.get('/cliente/email', async (req, res) => {
   const clienteId = req.query.id;
@@ -741,6 +741,41 @@ app.get('/artigiano/email', async (req, res) => {
 
   res.json({ email: result[0].email });
 });
+
+
+//recupa l'azienda
+app.get('/artigiano/nomeAzienda', async (req, res) => {
+  const iva = req.query.id;
+  if (!iva) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+  try {
+    const result = await client.query('SELECT nomeAzienda FROM artigiano WHERE iva = $1', [iva]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Artigiano non trovato' });
+
+    res.json({ nomeAzienda: result.rows[0].nomeazienda });
+  } catch (err) {
+    console.error('Errore nella query nomeAzienda:', err);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
+
+//aggiunta per recuperare dall'iva la mail 
+app.get('/artigiano/iva-by-email', async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'Email mancante' });
+
+  try {
+    const result = await client.query('SELECT iva FROM artigiano WHERE email = $1', [email]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Artigiano non trovato' });
+
+    res.json({ iva: result.rows[0].iva });
+  } catch (err) {
+    console.error('Errore durante la query iva-by-email:', err);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
 
 app.get('/prodotto/categoria', async (req, res) => {
   const categoria = req.query.categoria;
@@ -839,6 +874,22 @@ app.post('/cart/svuotaCarrello', async (req, res) => {
   } catch (error) {
     console.error('Errore durante lo svuotamento del carrello:', error);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+//trova che utente sei 
+app.get('/utente/tipo', async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'Email mancante' });
+
+  try {
+    const result = await client.query('SELECT tipo FROM login WHERE email = $1', [email]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Utente non trovato' });
+
+    res.json({ tipo: result.rows[0].tipo });
+  } catch (err) {
+    console.error('Errore tipo utente:', err);
+    res.status(500).json({ error: 'Errore del server' });
   }
 });
 
