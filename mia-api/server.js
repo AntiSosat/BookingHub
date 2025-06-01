@@ -141,7 +141,7 @@ async function getEmailArtigiano(id) {
 
 async function getProdottiCart(clienteId) {
   const result = await client.query('SELECT idprodotto FROM cart WHERE emailcliente = $1', [clienteId]); //da sql emailcliente 
-  return result.rows.map(row => row.idProdotto);
+  return result.rows.map(row => row.idprodotto);  //era idProdotto andava in 500
 }
 
 // Funzioni per aggiungere dati
@@ -168,9 +168,9 @@ app.post('/cart/modificaQuantita', async (req, res) => {
       return res.status(400).json({ error: 'Parametri mancanti' });
     }
     const query = `
-      UPDATE carrello
+      UPDATE cart
       SET quantita = $1
-      WHERE idCliente = $2 AND idProdotto = $3
+      WHERE emailcliente = $2 AND idprodotto = $3
       RETURNING *`;
     const result = await client.query(query, [quantita, clienteId, prodottoId]);
 
@@ -181,6 +181,55 @@ app.post('/cart/modificaQuantita', async (req, res) => {
     res.json({ success: true, carrello: result.rows[0] });
   } catch (error) {
     console.error('Errore nella modifica quantità carrello:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+
+
+//endpoint per rimuovere un prodotto dal carrello
+app.post('/cart/rimuoviProdotto', async (req, res) => {
+  try {
+    const { clienteId, prodottoId } = req.body;
+    if (!clienteId || !prodottoId) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
+    const query = `
+      DELETE FROM cart
+      WHERE emailcliente = $1 AND idprodotto = $2
+      RETURNING *`;
+    const result = await client.query(query, [clienteId, prodottoId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Prodotto non trovato nel carrello' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Errore nella rimozione prodotto dal carrello:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+//recuperare la qta prodotto 
+app.get('/cart/quantita', async (req, res) => {
+  const { cliente, prodotto } = req.query;
+
+  if (!cliente || !prodotto) {
+    return res.status(400).json({ error: 'Parametri "cliente" e "prodotto" mancanti' });
+  }
+
+  try {
+    const result = await client.query(
+      'SELECT quantita FROM cart WHERE emailcliente = $1 AND idprodotto = $2',
+      [cliente, prodotto]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Prodotto non trovato nel carrello' });
+    }
+
+    res.json({ quantita: result.rows[0].quantita });
+  } catch (error) {
+    console.error('Errore durante il recupero quantità:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
@@ -452,7 +501,7 @@ app.get('/prodottobyId', async (req, res) => {
       return res.status(400).json({ error: 'Parametro "id" mancante ' });
     }
 
-    const result = await getNomeProdotto(id);
+    const result = await getProdottiByNome(id); //? getNomeProdotto(id)
 
     if (result.length === 0) {
       return res.status(404).json({ error: 'Prodotto non trovato ' });
@@ -756,8 +805,41 @@ app.get('/prodotti/descrizione', async (req, res) => {
   res.json(result);
 });
 
+
+
 app.get('/', (req, res) => {
   res.redirect('/loginForm/login-registration.html');
+});
+
+//aggiunta per riprendere sia nome prezo dall'id associato dentro al carrello
+app.get('/prodotto/dettagli', async (req, res) => {
+  const id = req.query.id;
+  if (!id) {
+    return res.status(400).json({ error: 'Parametro "id" mancante' });
+  }
+  const result = await client.query('SELECT nome, prezzo FROM prodotti WHERE id = $1', [id]);
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'Prodotto non trovato' });
+  }
+  res.json(result.rows[0]);
+});
+
+//svuota carrello (vedi video)
+app.post('/cart/svuotaCarrello', async (req, res) => {
+  const { clienteId } = req.body;
+
+  if (!clienteId) {
+    return res.status(400).json({ error: 'Parametro "clienteId" mancante' });
+  }
+
+  try {
+    const result = await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
+
+    res.json({ success: true, deletedCount: result.rowCount });
+  } catch (error) {
+    console.error('Errore durante lo svuotamento del carrello:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
 });
 
 
