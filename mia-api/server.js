@@ -391,10 +391,9 @@ app.post('/loginCliente', async (req, res) => {
 });
 
 app.post('/loginArtigiano', async (req, res) => {
-  const { email, password, iva } = req.query;
+  const { email, password, iva } = req.body;
 
   try {
-    // Verifica se esiste l'utente nel login
     const loginResult = await client.query(
       'SELECT 1 FROM login WHERE email = $1 AND password = $2',
       [email, password]
@@ -404,7 +403,6 @@ app.post('/loginArtigiano', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Credenziali non valide' });
     }
 
-    // Verifica se è un artigiano valido
     const artigianoResult = await client.query(
       'SELECT 1 FROM artigiano WHERE email = $1 AND iva = $2',
       [email, iva]
@@ -417,7 +415,7 @@ app.post('/loginArtigiano', async (req, res) => {
     }
   } catch (err) {
     console.error('Errore loginArtigiano:', err);
-    return res.json({ error: 'Errore del server' });
+    return res.status(500).json({ error: 'Errore del server' });
   }
 });
 

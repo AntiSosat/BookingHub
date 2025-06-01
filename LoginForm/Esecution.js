@@ -34,11 +34,10 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
     event.preventDefault(); 
 
     const iva = document.getElementById("pIva").value;
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("pass").value;
-
+    const email = document.getElementById("emailVend").value;
+    const password = document.getElementById("passVend").value;
     try {
-        const response = await fetch("/loginCliente", {
+        const response = await fetch("/loginArtigiano", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -49,8 +48,8 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
         const result = await response.json();
 
         if (!result.success) {
-            document.getElementById("email").value = "";
-            document.getElementById("pass").value = "";
+            document.getElementById("emailVend").value = "";
+            document.getElementById("passVend").value = "";
             document.getElementById("pIva").value = "";
             alert(result.message);
         } else {
