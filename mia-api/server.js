@@ -486,7 +486,7 @@ app.post('/aggiungiProdottoCarrello', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log("Prodotto non trovato.");
+      console.log("Prodotto non trovato nel carrello, lo aggiungo");
       try {
         const result = await client.query(
           `INSERT INTO cart (idprodotto, quantita, emailCliente)
