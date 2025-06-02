@@ -1,10 +1,27 @@
-const email = getParametro();
+// const email = getParametro();
 
+
+// function getParametro() {
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const email = urlParams.get('email') || urlParams.get('id');
+//     return (email && email !== "null") ? email : null;
+// }
 
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    const email = urlParams.get('email') || urlParams.get('id');
-    return (email && email !== "null") ? email : null;
+    let email = urlParams.get('id') || urlParams.get('email');
+    if (email && email !== "null") {
+        sessionStorage.setItem("userEmail", email);
+        console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
+    } else {
+        email = sessionStorage.getItem("userEmail");
+        console.log("userEmail presa in sessionStorage:", sessionStorage.getItem("userEmail"));
+    }
+    return email ? email : null;
+}
+
+function getUserRole() {
+    return sessionStorage.getItem("userRole") || null;
 }
 
 function toggleSidebar() {
@@ -12,13 +29,15 @@ function toggleSidebar() {
     sidebar.classList.toggle("attivo");
 }
 
-function accountPersonale(){
+function accountPersonale() {
+    const email = getParametro();
     console.log("EMAIL PRIMA DEL REDIRECT DASHBOARD:", email);   //non ancora testato ma credo sia la stessa cosa di sotto , `../UserForm/dashboard.html?email=${email}
-    location.href = `../UserForm/dashboard.html?id=${email}`; 
+    location.href = `../UserForm/dashboard.html?id=${email}`;
 }
-function carrelloPersonale(){
+function carrelloPersonale() {
+    const email = getParametro();
     console.log("EMAIL PRIMA DEL REDIRECT:", email);  //ora ok funziona, prima dava null con sotto  ../CartForm/cart.html?email=${email}
-    location.href = `../CartForm/cart.html?id=${email}`; 
+    location.href = `../CartForm/cart.html?id=${email}`;
 }
 
 function aggiuntaProdottoCarrello(idProdotto, email) {
@@ -29,21 +48,28 @@ function aggiuntaProdottoCarrello(idProdotto, email) {
         },
         body: JSON.stringify({ idProdotto, email })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert("Prodotto aggiunto al carrello con successo!");
-        } else {
-            alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
-        }
-    })
-    .catch(error => {
-        alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Prodotto aggiunto al carrello con successo!");
+            } else {
+                alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
+            }
+        })
+        .catch(error => {
+            alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
+        });
 }
 
 document.addEventListener("DOMContentLoaded", async function () {
-const prodotti = await restituisciTuttiProdotti();
+
+    const email = getParametro();
+    if (!email) {
+        alert("Sessione non trovata. Effettua il login.");
+        window.location.href = "../LoginForm/login-registration.html";
+        return;
+    }
+    const prodotti = await restituisciTuttiProdotti();
     if (prodotti.length > 0) {
         Object.values(prodotti).forEach(prodotto => {
             const prodottiContainer = document.getElementById("prodotti");
@@ -86,7 +112,7 @@ const prodotti = await restituisciTuttiProdotti();
 });
 
 
-    
+
 async function restituisciTuttiProdotti() {
     try {
         const response = await fetch("/prodotti", {

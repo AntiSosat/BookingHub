@@ -20,8 +20,8 @@ client.connect()
 app.use(express.static(path.join(__dirname, '..')));
 // Funzioni get
 
-async function getOrdiniCliente(clienteId) {
-  const result = await client.query('SELECT id FROM ordine WHERE cliente = $1', [clienteId]);
+async function getOrdiniCliente(email) { //clienteId
+  const result = await client.query('SELECT id FROM ordine WHERE cliente = $1', [email]); //clienteId
   return result.rows.map(row => row.id);
 }
 
@@ -119,7 +119,7 @@ async function getEmailCliente(id) {
 }
 
 async function getDataNascitaCliente(id) {
-  const result = await client.query('SELECT data_nascita FROM cliente WHERE email = $1', [email]);
+  const result = await client.query('SELECT data_nascita FROM cliente WHERE email = $1', [id]); //email
   return result.rows.map(row => row.data_nascita);
 }
 
@@ -142,6 +142,27 @@ async function getEmailArtigiano(id) {
 async function getProdottiCart(clienteId) {
   const result = await client.query('SELECT idprodotto FROM cart WHERE emailcliente = $1', [clienteId]); //da sql emailcliente 
   return result.rows.map(row => row.idprodotto);  //era idProdotto andava in 500
+}
+
+//per le statistiche ordini utente 
+async function getNumeroOrdiniCliente(email) {
+  const result = await client.query('SELECT COUNT(DISTINCT id) AS numero_ordini FROM ordine WHERE cliente = $1', [email]);
+  return result.rows[0];  
+}
+ 
+async function getTotaleProdottiAcquistati(email) {
+  const result = await client.query('SELECT SUM(quantita) AS totale_prodotti FROM ordine WHERE cliente = $1', [email]);
+  return result.rows[0];  
+}
+ 
+async function getTotaleSpesaCliente(email) {
+  const result = await client.query(`
+    SELECT SUM(o.quantita * p.prezzo) AS totale_speso
+    FROM ordine o
+    JOIN prodotti p ON o.prodotto = p.id
+    WHERE o.cliente = $1
+  `, [email]);
+  return result.rows[0];  
 }
 
 // Funzioni per aggiungere dati
@@ -695,7 +716,7 @@ app.get('/cliente/data_nascita', async (req, res) => {
     return res.status(404).json({ error: 'Cliente non trovato ' });
   }
 
-  res.json({ data_nascita: result[0].data_nascita });
+  res.json({ data_nascita: result[0] });  //result[0].data_nascita 
 });
 
 app.get('/artigiano/iva', async (req, res) => {
@@ -888,6 +909,46 @@ app.get('/utente/tipo', async (req, res) => {
   } catch (err) {
     console.error('Errore tipo utente:', err);
     res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
+
+app.get('/stat/ordini', async (req, res) => {
+  const email = req.query.cliente;
+  if (!email) return res.status(400).json({ error: 'Parametro "cliente" mancante' });
+
+  try {
+    const result = await getNumeroOrdiniCliente(email);
+    res.json(result);
+  } catch (err) {
+    console.error('Errore numero ordini:', err);
+    res.status(500).json({ error: 'Errore server' });
+  }
+});
+
+app.get('/stat/quantita', async (req, res) => {
+  const email = req.query.cliente;
+  if (!email) return res.status(400).json({ error: 'Parametro "cliente" mancante' });
+
+  try {
+    const result = await getTotaleProdottiAcquistati(email);
+    res.json(result);
+  } catch (err) {
+    console.error('Errore totale prodotti:', err);
+    res.status(500).json({ error: 'Errore server' });
+  }
+});
+
+app.get('/stat/spesa', async (req, res) => {
+  const email = req.query.cliente;
+  if (!email) return res.status(400).json({ error: 'Parametro "cliente" mancante' });
+
+  try {
+    const result = await getTotaleSpesaCliente(email);
+    res.json(result);
+  } catch (err) {
+    console.error('Errore totale spesa:', err);
+    res.status(500).json({ error: 'Errore server' });
   }
 });
 

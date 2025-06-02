@@ -81,7 +81,11 @@
                     const result = await response.json();
                     console.log("Risposta dal server:", result);
                     if (result.success) {
-                        window.location.href = `../ShopForm/shop.html?id=${email}`;
+                        // window.location.href = `../ShopForm/shop.html?id=${email}`;
+                        sessionStorage.setItem("userEmail", email);
+                        console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
+                        window.location.href = "../ShopForm/shop.html";
+
                     } else {
                         alert(result.message);
                     }

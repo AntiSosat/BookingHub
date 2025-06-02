@@ -79,13 +79,16 @@
                     const result = await response.json();
                     {
                         if (result.success) {
-                            window.location.href = `../ShopForm/shop.html?id=${email}`;
-                        }else{
+                            // window.location.href = `../ShopForm/shop.html?id=${email}`;
+                            sessionStorage.setItem("azinedaEmail", email);   
+                            console.log("Email salvato in sessionStorage:", sessionStorage.getItem("aziendaEmail"));                     
+                            window.location.href = "../ShopForm/shop.html";
+                        } else {
                             alert(result.message)
                         }
                     }
                 } catch (error) {
-                alert("Errore durante la registrazione. Riprova più tardi.");
+                    alert("Errore durante la registrazione. Riprova più tardi.");
                 }
             }
 

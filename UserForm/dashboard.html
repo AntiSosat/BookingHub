@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,44 +9,57 @@
 </head>
 
 <body>
-    <header>
-        <div class="header">
-            <h1>Pannello di controllo</h1>
-            <div class="icons">
-                <span class="icon" aria-label="Torna alla Home"><a href="../ShopForm/shop.html">🏠</a></span>
-                <span class="icon" aria-label="Logout"><a href="../LoginForm/login-registration.html">🔓</a></span>
-            </div>
-        </div>
-    </header>
+  <header>
+    <div class="header">
+      <h1>Pannello di controllo</h1>
+      <div class="icons">
+        <span class="icon" aria-label="Torna alla Home"><a href="../ShopForm/shop.html">🏠</a></span>
+        <span class="icon" aria-label="Logout"><a href="../LoginForm/login-registration.html">🔓</a></span>
+      </div>
+    </div>
+  </header>
   <main class="container">
     <div class="main-column">
       <section class="card">
-       <div class="card-header card-primary">Informazioni Account</div>
-       <div class="card-body" id="user-data"></div>
+        <div class="card-header card-primary">Informazioni Account</div>
+        <div class="card-body" id="user-data"></div>
       </section>
 
-      <!--Artigiano-->
-      <section class="card venditore-only" style="display: none;">
-        <div class="card-header card-success">Gestione Prodotti</div>
-        <div class="card-body">
-          <button id="add-product" class="btn btn-primary">➕ Aggiungi Prodotto</button>
-          <button id="view-products" class="btn btn-secondary">🔍 Visualizza Prodotti</button>
-          <button id="edit-products" class="btn btn-warning">✏️ Modifica Prodotti</button>
-          <button id="delete-products" class="btn btn-danger">🗑️ Elimina Prodotti</button>
-        </div>"
+      <section class="card" id="stats-card"> <!-- ✅ Spostata qui -->
+        <div class="card-header card-primary">Statistiche Ordini</div>
+        <div class="card-body" id="order-stats">
+          <p>📦 Ordini effettuati: <span id="stat-ordini">0</span></p>
+          <p>📥 Prodotti acquistati: <span id="stat-prodotti">0</span></p>
+          <p>💰 Totale speso: <span id="stat-speso">€0</span></p>
+        </div>
       </section>
     </div>
 
-    
+
+    <!--Artigiano-->
+    <section class="card venditore-only" style="display: none;">
+      <div class="card-header card-success">Gestione Prodotti</div>
+      <div class="card-body">
+        <button id="add-product" class="btn btn-primary">➕ Aggiungi Prodotto</button>
+        <button id="view-products" class="btn btn-secondary">🔍 Visualizza Prodotti</button>
+        <button id="edit-products" class="btn btn-warning">✏️ Modifica Prodotti</button>
+        <button id="delete-products" class="btn btn-danger">🗑️ Elimina Prodotti</button>
+      </div>"
+    </section>
+    </div>
+
+
     <div class="side-column">
-    <!--Cliente-->
+      <!--Cliente-->
       <section class="card cliente-only" style="display: none;">
         <div class="card-header card-info">Storico Ordini</div>
-        <div class="card-body" id="order-history"></div>
-     </section>
-     
+        <ul class="card-body" id="order-history"></ul>
+      </section>
 
-     <!--Artigiano-->
+
+
+
+      <!--Artigiano-->
       <section class="card venditore-only" style="display: none;">
         <div class="card-header card-secondary">Monitoraggio Vendite</div>
         <div class="card-body">
@@ -55,35 +69,36 @@
       </section>
     </div>
     <!-- Popup Gestione Prodotti -->
-<div id="popup-prodotti" class="popup hidden">
-  <div class="popup-content">
-    <h2 id="popup-title">Gestione Prodotti</h2>
-    <ul id="lista-prodotti"></ul>
+    <div id="popup-prodotti" class="popup hidden">
+      <div class="popup-content">
+        <h2 id="popup-title">Gestione Prodotti</h2>
+        <ul id="lista-prodotti"></ul>
 
-    <div id="form-aggiungi" class="form-area hidden">
-      <h3>Aggiungi nuovo prodotto</h3>
-      <input type="text" id="nome-nuovo" placeholder="Nome prodotto" />
-      <input type="number" id="prezzo-nuovo" placeholder="Prezzo prodotto" />
-      <button id="btn-salva-nuovo" class="btn btn-primary">Salva</button>
+        <div id="form-aggiungi" class="form-area hidden">
+          <h3>Aggiungi nuovo prodotto</h3>
+          <input type="text" id="nome-nuovo" placeholder="Nome prodotto" />
+          <input type="number" id="prezzo-nuovo" placeholder="Prezzo prodotto" />
+          <button id="btn-salva-nuovo" class="btn btn-primary">Salva</button>
+        </div>
+
+        <div id="form-modifica" class="form-area hidden">
+          <h3>Modifica prodotto</h3>
+          <input type="text" id="mod-nome" />
+          <input type="number" id="mod-prezzo" />
+          <button id="btn-salva-modifica" class="btn btn-warning">Salva Modifica</button>
+        </div>
+
+        <button id="popup-close" class="btn btn-secondary">Chiudi</button>
+      </div>
     </div>
-
-    <div id="form-modifica" class="form-area hidden">
-      <h3>Modifica prodotto</h3>
-      <input type="text" id="mod-nome" />
-      <input type="number" id="mod-prezzo" />
-      <button id="btn-salva-modifica" class="btn btn-warning">Salva Modifica</button>
-    </div>
-
-    <button id="popup-close" class="btn btn-secondary">Chiudi</button>
-  </div>
-</div>
 
 
 
   </main>
 
-  
+
 
   <script src="dashboard.js" defer></script>
 </body>
+
 </html>

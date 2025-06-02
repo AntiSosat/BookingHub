@@ -1,22 +1,38 @@
-const email = getParametro();
+// const email = getParametro();
 
 function getParametro() {
   const urlParams = new URLSearchParams(window.location.search);
-  const email = urlParams.get('id') || urlParams.get('email');
-  return (email && email !== "null") ? email : null;
+  let email = urlParams.get('id') || urlParams.get('email');
+  if (email && email !== "null") {
+    sessionStorage.setItem("userEmail", email);
+    console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
+  } else {
+    email = sessionStorage.getItem("userEmail");
+    console.log("userEmail presa in sessionStorage:", sessionStorage.getItem("userEmail"));
+  }
+  return email ? email : null;
+}
+
+function getUserRole() {
+  return sessionStorage.getItem("userRole") || null;
 }
 
 
 //---cliente
 async function caricaDatiCliente(email) {
   try {
-    const [nomeRes, cognomeRes] = await Promise.all([
+    const [nomeRes, cognomeRes, dataNascitaRes] = await Promise.all([
       fetch(`/cliente/nome?id=${email}`).then(res => res.json()),
-      fetch(`/cliente/cognome?id=${email}`).then(res => res.json())
+      fetch(`/cliente/cognome?id=${email}`).then(res => res.json()),
+      fetch(`/cliente/data_nascita?id=${email}`).then(res => res.json())
     ]);
+
+
 
     const nome = nomeRes.nome;
     const cognome = cognomeRes.cognome;
+    const formatoData = new Date(dataNascitaRes.data_nascita).toLocaleDateString("it-IT");
+
 
     const userSection = document.getElementById("user-data");
     if (userSection) {
@@ -24,6 +40,7 @@ async function caricaDatiCliente(email) {
         <p><strong>Nome:</strong> ${nome}</p>
         <p><strong>Cognome:</strong> ${cognome}</p>
         <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Data di nascita:</strong> ${formatoData}</p>
       `;
     }
   } catch (error) {
@@ -40,33 +57,101 @@ async function caricaStoricoOrdini(email) {
   try {
     const response = await fetch(`/ordine/cliente?cliente=${email}`);
     const ordini = await response.json();
-
     orderList.innerHTML = "";
 
-    for (const ordineId of ordini) {
+    // Converte in un array di id unici
+    const uniqueOrdini = Array.from(new Set(ordini));
+
+    // Contenitore per tutti gli ordini
+    const ordersContainer = document.createElement("div");
+    ordersContainer.classList.add("orders-container");
+
+    if (!Array.isArray(uniqueOrdini) || uniqueOrdini.length === 0) {
+      orderList.innerHTML = "<li>Nessun ordine trovato</li>";
+      return;
+    }
+
+    for (const ordineId of uniqueOrdini) {
+      // Crea la "card" per ogni ordine
+      const ordineCard = document.createElement("div");
+      ordineCard.classList.add("ordine-card");
+
+      // Header cliccabile dell'ordine
+      const header = document.createElement("div");
+      header.classList.add("ordine-header");
+      header.textContent = `Ordine #${ordineId}`;
+
+      // Crea il contenuto (dettagli) dell'ordine
+      const content = document.createElement("div");
+      content.classList.add("ordine-content");
+
+      // Aggiunge il toggle
+      header.addEventListener("click", () => {
+        content.classList.toggle("hidden");
+      });
+
+      ordineCard.appendChild(header);
+
       const prodottiRes = await fetch(`/ordine/prodotti?cliente=${email}&ordine=${ordineId}`);
       const prodotti = await prodottiRes.json();
 
-      for (const prodottoId of prodotti) {
-        const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
-        const prodottoInfo = await prodottoInfoRes.json();
-
-        const li = document.createElement("li");
-        li.textContent = `🧾 ${prodottoInfo.nome} - Ordine #${ordineId}`;
-        orderList.appendChild(li);
+      if (Array.isArray(prodotti) && prodotti.length > 0) {
+        const ul = document.createElement("ul");
+        for (const prodottoId of prodotti) {
+          const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
+          const prodottoInfo = await prodottoInfoRes.json();
+          const li = document.createElement("li");
+          li.textContent = prodottoInfo?.nome || 'NOME NON TROVATO';
+          ul.appendChild(li);
+        }
+        content.appendChild(ul);
+      } else {
+        const p = document.createElement("p");
+        p.textContent = "Nessun prodotto in questo ordine.";
+        content.appendChild(p);
       }
+
+      ordineCard.appendChild(content);
+      ordersContainer.appendChild(ordineCard);
     }
 
+    orderList.appendChild(ordersContainer);
   } catch (error) {
     console.error("Errore nel caricamento storico ordini:", error);
-    throw error;
   }
 }
+
+
+async function caricaStatisticheOrdini(email) {
+  const statistiche = document.getElementById("order-stats");
+
+  if (!statistiche) return;
+
+  try {
+    const [ordini, prodotti, spesa] = await Promise.all([
+      fetch(`/stat/ordini?cliente=${email}`).then(res => res.json()),
+      fetch(`/stat/quantita?cliente=${email}`).then(res => res.json()),
+      fetch(`/stat/spesa?cliente=${email}`).then(res => res.json())
+    ]);
+
+
+    statistiche.innerHTML = `
+      <p>📦 Ordini effettuati: ${ordini.numero_ordini}</p>
+      <p>🛍️ Prodotti acquistati: ${prodotti.totale_prodotti}</p>
+      <p>💰 Totale speso: €${spesa.totale_speso}</p>
+    `;
+  } catch (error) {
+    console.error("Errore nel caricamento statistiche ordini:", error);
+    alert("Si è verificato un errore durante il caricamento delle statistiche degli ordini.");
+    return;
+  }
+}
+
 
 //---venditore
 async function caricaDatiVenditore(email) {
   try {
-    
+
     const ivaRes = await fetch(`/artigiano/iva-by-email?email=${email}`).then(res => res.json());
     const iva = ivaRes.iva;
 
@@ -105,11 +190,19 @@ async function caricaDatiVenditore(email) {
 function caricaDatiUtente(email, tipo) {
   try {
     if (tipo === "cliente") {
+
+      document.querySelectorAll(".cliente-only").forEach(el => el.style.display = "block");
+
       caricaDatiCliente(email);
       caricaStoricoOrdini(email);
+      caricaStatisticheOrdini(email);
+
     } else if (tipo === "artigiano") {
+
+      document.querySelectorAll(".artigiano-only").forEach(el => el.style.display = "block");
+
       caricaDatiVenditore(email);
-     // caricaProdottiVenditore(email);
+      // caricaProdottiVenditore(email);
     }
   } catch (error) {
     console.error("Errore nel caricamento dati utente:", error);
@@ -118,12 +211,15 @@ function caricaDatiUtente(email, tipo) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const email = getParametro();
+  const role = getUserRole();
   try {
-    if (!email) {
-      alert("Sessione non trovata. Effettua il login.");
-      window.location.href = "../LoginForm/login-registration.html";
-      return;
-    }
+
+  if (!email || !role) {
+    alert("Sessione non trovata. Effettua il login.");
+    window.location.href = "../LoginForm/login-registration.html";
+    return;
+  }
 
     const response = await fetch(`/utente/tipo?email=${email}`);
     const data = await response.json();
