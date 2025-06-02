@@ -112,6 +112,7 @@ h1{
 
 .sidebar-slide.attivo {
     display: block;
+    height: 500px;
 }
 
 .prodotti {
@@ -151,6 +152,16 @@ h1{
     cursor: pointer;
     border-radius: 5px;
     font-size: 16px;
+}
+button{
+     background-color: #2e5cf5;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-top: 20px;
 }
 
 .product button:hover {
