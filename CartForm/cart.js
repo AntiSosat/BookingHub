@@ -84,26 +84,45 @@ async function modificaQuantitaCarrello(id, nuovaQuantita, email) {
 document.addEventListener("DOMContentLoaded", () => {
 
 
+  // function getParametro() {
+  //   const urlParams = new URLSearchParams(window.location.search);
+  //   return urlParams.get('email') || urlParams.get('id'); // supporta entrambi
+  // }
+
+  // // 1. Leggo da URL
+  // const emailFromURL = getParametro();
+
+  // // 2. Se esiste, salvo in sessionStorage
+  // if (emailFromURL && emailFromURL !== "null") {
+  //   sessionStorage.setItem("email", emailFromURL);
+  // }
+
+  // // 3. Recupero SEMPRE da sessionStorage per usare nel resto del file
+  // const email = sessionStorage.getItem("email");
+
   function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('email') || urlParams.get('id'); // supporta entrambi
+    let email = urlParams.get('id') || urlParams.get('email');
+    if (email && email !== "null") {
+      sessionStorage.setItem("userEmail", email);
+      console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
+    } else {
+      email = sessionStorage.getItem("userEmail");
+      console.log("userEmail preso in sessionStorage:", sessionStorage.getItem("userEmail"));
+    }
+    return email ? email : null;
   }
+  function getUserRole() {
+  return sessionStorage.getItem("userRole") || null;
+  } 
 
-  // 1. Leggo da URL
-  const emailFromURL = getParametro();
-
-  // 2. Se esiste, salvo in sessionStorage
-  if (emailFromURL && emailFromURL !== "null") {
-    sessionStorage.setItem("email", emailFromURL);
-  }
-
-  // 3. Recupero SEMPRE da sessionStorage per usare nel resto del file
-  const email = sessionStorage.getItem("email");
+  const email = getParametro();
+  const role = getUserRole();
 
   // 4. Se ancora assente → reindirizza al login
-  if (!email) {
-    alert("Nessuna sessione attiva. Effettua il login.");
-    location.href = "/LoginForm/login-registration.html";
+  if (!email || !role) {
+    alert("Sessione non trovata. Effettua il login.");
+    window.location.href = "../LoginForm/login-registration.html";
     return;
   }
 
@@ -211,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
       //event listeners per rimuovere e modificare quantità
       div.querySelector('.remove-from-cart').addEventListener('click', async function () {
         if (confirm("Vuoi rimuovere questo prodotto dal carrello?")) {
-          await rimuoviProdottoDalCarrello(id,email);
+          await rimuoviProdottoDalCarrello(id, email);
           div.remove();
           aggiornaTotale();
         }
@@ -223,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const newQty = prompt("Inserisci la nuova quantità:", currentQty);
         if (newQty !== null && !isNaN(newQty) && Number(newQty) > 0) {
           await modificaQuantitaCarrello(id, Number(newQty), email);
-          await visualizzaCarrello(); 
+          await visualizzaCarrello();
         }
       })
 
@@ -317,7 +336,7 @@ async function pagaaaree() {
 }
 
 
- 
+
 /*
 test visualizzazione carrello e lista dei desideri
 

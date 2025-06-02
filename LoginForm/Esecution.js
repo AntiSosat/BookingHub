@@ -20,6 +20,9 @@ document.getElementById("login-cliente").addEventListener("submit", async functi
                 document.getElementById("pass").value = "";
                 alert(result.message);
             }else{
+                //window.location.href = `../ShopForm/shop.html?id=${email}`;
+                sessionStorage.setItem("userEmail", email);
+                sessionStorage.setItem("userRole", "cliente");
                 window.location.href = `../ShopForm/shop.html?id=${email}`;
             }
         }
@@ -53,6 +56,9 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
             document.getElementById("pIva").value = "";
             alert(result.message);
         } else {
+            //window.location.href = `../ShopForm/shop.html?id=${email}`;
+            sessionStorage.setItem("userEmail", email);
+            sessionStorage.setItem("userRole", "artigiano");
             window.location.href = `../ShopForm/shop.html?id=${email}`;
         }
 
