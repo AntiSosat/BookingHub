@@ -42,8 +42,9 @@ async function getVenditoriOrdine(ordineId) {
 
 
 async function getProdottiArtigiano(artigianoId) {
-  const result = await client.query('SELECT * FROM prodotti WHERE idvenditore = $1', [artigianoId]);
-  return result.rows.map(row => row.nome);
+
+  const result = await client.query('SELECT * FROM prodotti WHERE ivavenditore = $1', [artigianoId]);
+  return result.rows; //.map(row => row.nome);  
 }
 
 async function getProdottiByPrezzo(prezzo) {
@@ -129,17 +130,17 @@ async function getDataNascitaCliente(id) {
 }
 
 
-async function getIVAArtigiano(id) {
+async function getIVAArtigiano(iva) { //id
   const result = await client.query('SELECT iva FROM artigiano WHERE iva = $1', [iva]); //da fare con id
   return result.rows.map(row => row.iva);
 }
 
-async function getNumeroTelArtigiano(id) {
+async function getNumeroTelArtigiano(iva) { //id
   const result = await client.query('SELECT numerotel FROM artigiano WHERE iva = $1', [iva]); //da fare con id
   return result.rows.map(row => row.numerotel);
 }
 
-async function getEmailArtigiano(id) {
+async function getEmailArtigiano(iva) { //id
   const result = await client.query('SELECT email FROM artigiano WHERE iva = $1', [iva]); //da fare con id
   return result.rows.map(row => row.email);
 }
@@ -305,6 +306,75 @@ app.post('/aggiungiProdotto', async (req, res) => {
   } catch (error) {
     console.error('Errore durante l\'aggiunta del prodotto:', error.message);
     res.status(500).json({ error: 'Errore interno del server.' });
+  }
+});
+
+//artigiano aggiungi prodotto
+app.post('/prodotto/aggiungi', async (req, res) => {
+  const { categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione } = req.body;
+
+  try {
+    const result = await client.query(`
+      INSERT INTO prodotti (categoria, prezzo, disponibilita, ivavenditore, nome, immagine, descrizione)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *`,
+      [categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Errore durante l\'aggiunta del prodotto:', error);
+    res.status(500).json({ error: 'Errore interno del server.' });
+  }
+});
+
+//artigiano modifica prodotto
+app.put('/prodotto/modifica', async (req, res) => {
+  const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
+
+  if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+  try {
+    const result = await client.query(`
+      UPDATE prodotti
+      SET nome = $1,
+          prezzo = $2,
+          disponibilita = $3,
+          descrizione = $4,
+          categoria = $5
+      WHERE id = $6
+      RETURNING *`,
+      [nome, prezzo, disponibilita, descrizione, categoria, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Prodotto non trovato' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Errore nella modifica del prodotto:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+//artigiano elimina prodotto
+app.delete('/prodotto/elimina', async (req, res) => {
+  const { id } = req.body;
+
+  if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+  try {
+    const result = await client.query('DELETE FROM prodotti WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Prodotto non trovato' });
+    }
+
+    res.json({ success: true, eliminato: result.rows[0] });
+  } catch (error) {
+    console.error('Errore durante l\'eliminazione del prodotto:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 
@@ -869,6 +939,27 @@ app.get('/artigiano/iva-by-email', async (req, res) => {
     res.json({ iva: result.rows[0].iva });
   } catch (err) {
     console.error('Errore durante la query iva-by-email:', err);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
+//al posto delle altre, dalla mail prendi l'email e ricava iva numtel email nomeazienda
+app.get('/artigiano/info', async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'Parametro "email" mancante' });
+
+  try {
+    const result = await client.query(`
+      SELECT iva, numeroTel, email, nomeAzienda
+      FROM artigiano
+      WHERE email = $1
+    `, [email]);
+
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Artigiano non trovato' });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Errore nella query /artigiano/info:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 });
