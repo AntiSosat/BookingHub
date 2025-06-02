@@ -41,7 +41,7 @@ function carrelloPersonale() {
 }
 
 function aggiuntaProdottoCarrello(idProdotto, email) {
-    fetch("/aggiungiProdotto", {
+    fetch("/aggiungiProdottoCarrello", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -66,11 +66,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const email = getParametro();
     if (!email) {
         alert("Sessione non trovata. Effettua il login.");
-        window.location.href = "../LoginForm/login-registration.html";
+        console.log("Email di sessione: ", email);
+        location.href = "../LoginForm/login-registration.html";
         return;
     }
     const prodotti = await restituisciTuttiProdotti();
-    if (prodotti.length > 0) {
+if (prodotti && Object.keys(prodotti).length > 0) {
         Object.values(prodotti).forEach(prodotto => {
             const prodottiContainer = document.getElementById("prodotti");
 
@@ -78,7 +79,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             const productDiv = document.createElement("div");
             productDiv.className = "product";
             productDiv.onclick = () => {
-                location.href = `infoProdottoSpec.html?id=${prodotto.id},${email}`; // Reindirizza alla pagina delle specifiche del prodotto
+                sessionStorage.setItem("idProduct", prodotto.id); // Salva l'ID del prodotto in sessionStorage
+                location.href = `InfoProdottoSpec.html?id=${prodotto.id},${email}`; // Reindirizza alla pagina delle specifiche del prodotto
             };
 
             // Crea e aggiungi l'immagine
@@ -94,13 +96,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             // Prezzo
             const price = document.createElement("p");
-            price.innerHTML = `<strong>${prodotto.prezzo}</strong>`;
+            price.innerHTML = `<strong> Prezzo: ${prodotto.prezzo} €</strong>`;
             productDiv.appendChild(price);
 
             // Bottone
             const btn = document.createElement("button");
             btn.textContent = "Aggiungi al carrello";//Aggiungere funzionalità per aggiungere al carrello
             btn.onclick = (event) => {
+                event.stopPropagation(); // evita il redirect causayo del producDiv.onclick
                 aggiuntaProdottoCarrello(prodotto.id, email);
             }
             productDiv.appendChild(btn);
@@ -125,5 +128,6 @@ async function restituisciTuttiProdotti() {
         return result;
     } catch (error) {
         alert("Errore durante il recupero dei prodotti: " + error.message);
+        return[];
     }
 }

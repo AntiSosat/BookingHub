@@ -1,16 +1,12 @@
-const {idPord,email} = getParametro();
-
-
 function getParametro() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get({
-        id: urlParams.get('id'),
-        email: urlParams.get('email')
-    });
+    const email = sessionStorage.getItem("userEmail");
+    const idProdotto = sessionStorage.getItem("idProduct"); 
+    return { idProdotto, email };
 }
 
+
 function aggiuntaProdottoCarrello(idProdotto, email) {
-    fetch("/aggiungiProdotto", {
+    fetch("/aggiungiProdottoCarrello", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -29,9 +25,29 @@ function aggiuntaProdottoCarrello(idProdotto, email) {
         alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
     });
 }
+
 document.addEventListener("DOMContentLoaded", async function () {
-    prodottoSpecifico = await restituisciProdottiSpec();
+    console.log(sessionStorage.getItem("idProduct"));
+    const parametri = getParametro();
+    if (!parametri) {
+        alert("Sessione o prodotto non trovati. Effettua il login.");
+        window.location.href = "../LoginForm/login-registration.html";
+        return;
+    }
+    const { idProdotto, email } = parametri;
+
+    const prodottoSpecifico = await restituisciProdottiSpec(idProdotto);
+    console.log("Prodotto specifico:", prodottoSpecifico);
+    if (!prodottoSpecifico) {
+        alert("Prodotto non trovato.");
+        return;
+    }
+
     const wrapper = document.getElementById("product-wrapper");
+    if (!wrapper) {
+        console.error("Elemento #product-wrapper non trovato.");
+        return;
+    }
 
     // Crea il contenitore principale
     const container = document.createElement("div");
@@ -41,8 +57,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     const imageSection = document.createElement("div");
     imageSection.className = "image-section";
     const img = document.createElement("img");
-    img.src = prodottoSpecifico.immagine;
-    img.alt = "Nome del Prodotto";
+    img.src = prodottoSpecifico[0].immagine;
+    img.alt = prodottoSpecifico[0].nome || "Nome del Prodotto";
     imageSection.appendChild(img);
 
     // Sezione dettagli
@@ -53,26 +69,30 @@ document.addEventListener("DOMContentLoaded", async function () {
     title.textContent = prodottoSpecifico.nome;
 
     const brand = document.createElement("p");
-    brand.innerHTML = "<strong>Marchio:</strong> ${prodottoSpecifico.idVenditore}";
+    brand.innerHTML = `<strong>Marchio:</strong> ${prodottoSpecifico[0].ivavenditore}`;
 
     const color = document.createElement("p");
-    color.innerHTML = "<strong>Categoria:</strong> ${prodottoSpecifico.categoria}";
+    color.innerHTML = `<strong>Categoria:</strong> ${prodottoSpecifico[0].categoria}`;
 
     const description = document.createElement("p");
-    description.innerHTML = "<strong>Descrizione:</strong> ${prodottoSpecifico.descrizione}";
+    description.innerHTML = `<strong>Descrizione:</strong> ${prodottoSpecifico[0].descrizione}`;
     description.className = "description";
+
+    const dispo = document.createElement("p");
+    dispo.innerHTML = `<strong>Disponibilità: </strong> ${prodottoSpecifico[0].disponibilita}`;
+    dispo.className = "dispo";
 
     const price = document.createElement("p");
     price.className = "price";
-    price.textContent = prodottoSpecifico.prezzo + " €";
+    price.textContent = prodottoSpecifico[0].prezzo + " €";
 
     // Pulsante acquisto
     const buySection = document.createElement("div");
     buySection.className = "buy-section";
     const button = document.createElement("button");
     button.textContent = "Aggiungi al Carrello";
-    btn.onclick = (event) => {
-        aggiuntaProdottoCarrello(prodotto.id, email);
+    button.onclick = () => {
+        aggiuntaProdottoCarrello(idProdotto, email);
     }
     buySection.appendChild(button);
 
@@ -81,6 +101,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     detailsSection.appendChild(brand);
     detailsSection.appendChild(color);
     detailsSection.appendChild(description);
+    detailsSection.appendChild(dispo);
     detailsSection.appendChild(price);
     detailsSection.appendChild(buySection);
 
@@ -92,18 +113,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     wrapper.appendChild(container);
 });
 
-async function restituisciProdottiSpec() {
+async function restituisciProdottiSpec(idProdotto) {
     try {
         const response = await fetch("/prodottobyID", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
-            }
-            , body: JSON.stringify({ id: id })
+            },
+            body: JSON.stringify({ id: idProdotto })
         });
+        if (!response.ok) {
+            throw new Error("Errore nella risposta dal server");
+        }
         const result = await response.json();
-        return result;
+        return result.dati;
     } catch (error) {
-        alert("Errore durante il recupero dei prodotti: " + error.message);
+        return null;
     }
 }
