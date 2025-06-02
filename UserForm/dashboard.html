@@ -18,14 +18,16 @@
       </div>
     </div>
   </header>
-  <main class="container">
+
+  <main class="container two-columns">
+
     <div class="main-column">
       <section class="card">
         <div class="card-header card-primary">Informazioni Account</div>
         <div class="card-body" id="user-data"></div>
       </section>
 
-      <section class="card" id="stats-card"> <!-- ✅ Spostata qui -->
+      <section class="card cliente-only" id="stats-card" style="display: none;">
         <div class="card-header card-primary">Statistiche Ordini</div>
         <div class="card-body" id="order-stats">
           <p>📦 Ordini effettuati: <span id="stat-ordini">0</span></p>
@@ -33,34 +35,26 @@
           <p>💰 Totale speso: <span id="stat-speso">€0</span></p>
         </div>
       </section>
-    </div>
 
-
-    <!--Artigiano-->
-    <section class="card venditore-only" style="display: none;">
-      <div class="card-header card-success">Gestione Prodotti</div>
-      <div class="card-body">
-        <button id="add-product" class="btn btn-primary">➕ Aggiungi Prodotto</button>
-        <button id="view-products" class="btn btn-secondary">🔍 Visualizza Prodotti</button>
-        <button id="edit-products" class="btn btn-warning">✏️ Modifica Prodotti</button>
-        <button id="delete-products" class="btn btn-danger">🗑️ Elimina Prodotti</button>
-      </div>"
-    </section>
+      <section class="card artigiano-only" style="display: none;">
+        <div class="card-header card-success">Gestione Prodotti</div>
+        <div class="card-body">
+          <button id="add-product" class="btn btn-primary">➕ Aggiungi Prodotto</button>
+          <button id="view-products" class="btn btn-secondary">🔍 Visualizza Prodotti</button>
+          <button id="edit-products" class="btn btn-warning">✏️ Modifica Prodotti</button>
+          <button id="delete-products" class="btn btn-danger">🗑️ Elimina Prodotti</button>
+        </div>
+      </section>
     </div>
 
 
     <div class="side-column">
-      <!--Cliente-->
       <section class="card cliente-only" style="display: none;">
         <div class="card-header card-info">Storico Ordini</div>
         <ul class="card-body" id="order-history"></ul>
       </section>
 
-
-
-
-      <!--Artigiano-->
-      <section class="card venditore-only" style="display: none;">
+      <section class="card artigiano-only" style="display: none;">
         <div class="card-header card-secondary">Monitoraggio Vendite</div>
         <div class="card-body">
           <p>📦 Articoli pubblicati: <span id="cont-prodotti">0</span></p>
@@ -68,7 +62,8 @@
         </div>
       </section>
     </div>
-    <!-- Popup Gestione Prodotti -->
+
+
     <div id="popup-prodotti" class="popup hidden">
       <div class="popup-content">
         <h2 id="popup-title">Gestione Prodotti</h2>
@@ -78,25 +73,35 @@
           <h3>Aggiungi nuovo prodotto</h3>
           <input type="text" id="nome-nuovo" placeholder="Nome prodotto" />
           <input type="number" id="prezzo-nuovo" placeholder="Prezzo prodotto" />
+          <input type="number" id="disponibilita-nuovo" placeholder="Disponibilità" />
+          <input type="text" id="descrizione-nuovo" placeholder="Descrizione" />
+          <input type="text" id="categoria-nuovo" placeholder="Categoria" />
+          <input type="text" id="immagine-nuovo" placeholder="URL Immagine" />
           <button id="btn-salva-nuovo" class="btn btn-primary">Salva</button>
         </div>
 
         <div id="form-modifica" class="form-area hidden">
           <h3>Modifica prodotto</h3>
-          <input type="text" id="mod-nome" />
-          <input type="number" id="mod-prezzo" />
+          <select id="select-modifica"></select>
+          <input type="text" id="mod-nome" placeholder="Modifica il nome" />
+          <input type="number" id="mod-prezzo" placeholder="Modifica il prezzo" />
+          <input type="number" id="mod-disponibilita" placeholder="Modifica la disponibilità" />
+          <input type="text" id="mod-descrizione" placeholder="Modifica la descrizione" />
+          <input type="text" id="mod-categoria" placeholder="Modifica la categoria" />
+          <input type="text" id="mod-immagine" placeholder="Modifica l'immagine" />
           <button id="btn-salva-modifica" class="btn btn-warning">Salva Modifica</button>
+        </div>
+
+        <div id="form-elimina" class="form-area hidden">
+          <h3>Elimina prodotto</h3>
+          <select id="select-elimina"></select>
+          <button id="btn-conferma-elimina" class="btn btn-danger">Elimina</button>
         </div>
 
         <button id="popup-close" class="btn btn-secondary">Chiudi</button>
       </div>
     </div>
-
-
-
   </main>
-
-
 
   <script src="dashboard.js" defer></script>
 </body>
