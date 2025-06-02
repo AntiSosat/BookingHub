@@ -310,7 +310,8 @@ async function pagaaaree() {
   document.getElementById("close-popup").addEventListener("click", async () => {
     popup.classList.add("hidden");
 
-    const email = sessionStorage.getItem("email");
+    // Usa "userEmail" se in getParametro salvi con questa chiave
+    const email = sessionStorage.getItem("userEmail");
     if (email) {
       try {
         const response = await fetch("/cart/svuotaCarrello", {
@@ -328,7 +329,7 @@ async function pagaaaree() {
       }
     }
 
-    // Svuota frontend
+    // Svuota il frontend
     document.querySelector(".cart-list").innerHTML = "";
     document.querySelector(".cart-summary-wrapper").style.display = "none";
     document.querySelector(".cart-empty").style.display = "block";
@@ -442,7 +443,6 @@ localStorage.setItem('wish-cart', JSON.stringify([
   { id: 3, name: "Anello", price: 14.99, quantity: 1 },
   { id: 4, name: "Orecchini", price: 7.49, quantity: 1 }
 ]));
-
 
 
 
