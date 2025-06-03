@@ -58,13 +58,13 @@ async function getProdottiByCategoria(categoria) {
 }
 
 async function getProdottiByDisponibilita(disponibilita) {
-  const result = await client.query('SELECT nome FROM prodotti WHERE disponibilita = $1', [disponibilita]);
+  const result = await client.query('SELECT nome FROM prodotti WHERE disponibilita >= $1', [disponibilita]);
   return result.rows.map(row => row.nome);
 }
 
 async function getProdottiByNome(nome) {
-  const result = await client.query('SELECT nome FROM prodotti WHERE nome ILIKE $1', [`%${nome}%`]);
-  return result.rows.map(row => row.nome);
+  const result = await client.query('SELECT * FROM prodotti WHERE nome ILIKE $1', [`%${nome}%`]);
+  return result.rows;
 }
 
 async function getProdottibyID(id) {
@@ -450,19 +450,19 @@ app.post('/eliminaArtigiano', async (req, res) => {
     const { id } = req.body;
 
     if (!id) {
-      return res.status(400).json({ error: 'Parametro "id" mancante' });
+      return res.json({ error: 'Parametro "id" mancante' });
     }
 
     const successo = await eliminaArtigiano(id);
 
     if (!successo) {
-      return res.status(404).json({ error: `Artigiano con id ${id} non trovato` });
+      return res.json({ error: `Artigiano con id ${id} non trovato` });
     }
 
     res.json({ success: true, message: `Artigiano con id ${id} eliminato` });
   } catch (error) {
     console.error('Errore durante eliminazione artigiano:', error.message);
-    res.status(500).json({ error: 'Errore interno del server.' });
+    res.json({ error: 'Errore interno del server.' });
   }
 });
 
@@ -542,7 +542,8 @@ app.get('/prodotti/idvenditore', async (req, res) => {
     res.json({ error: 'Errore interno del server' });
   }
 });
-//Aggiornamento prodotto se viene premuto 2 volte
+
+
 app.post('/aggiungiProdottoCarrello', async (req, res) => {
   const { idProdotto, email } = req.body;
   const quantitaBase = 1;
@@ -556,7 +557,7 @@ app.post('/aggiungiProdottoCarrello', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log("Prodotto non trovato.");
+      console.log("Prodotto non trovato nel carrello, lo aggiungo");
       try {
         const result = await client.query(
           `INSERT INTO cart (idprodotto, quantita, emailCliente)
@@ -564,22 +565,20 @@ app.post('/aggiungiProdottoCarrello', async (req, res) => {
         RETURNING *`,
           [idProdotto, quantitaBase, email]
         );
-
         if (result.rowCount === 0) {
-          return { success: false, message: "Errore nell'aggiunta del prodotto al carrello." };
+          return res.json({ success: false, message: "Errore nell'aggiunta del prodotto al carrello." });
+        } else {
+
+          return res.json({ success: true });
         }
-
-        return { success: true, cartItem: result.rows[0] };
-
       } catch (error) {
         console.error("Errore in aggiungiProdottoAlCarrello:", error.message);
         throw error;
       }
+    } else {
+      console.log("Prodotto aggiornato:", result.rows[0]);
+      return res.json({success: true, message: "Prodotto aggiornato con successo."});
     }
-
-    console.log("Prodotto aggiornato:", result.rows[0]);
-    return result.rows[0];
-
   } catch (error) {
     console.error("Errore durante l'incremento della quantità:", error);
     throw error;
@@ -624,6 +623,21 @@ app.post('/prodotti', async (req, res) => {
     res.json({ success:false,message: 'Errore interno del server' });
   }
 });*/
+app.post('/ricercaProdottiNome', async (req, res) => {
+
+  try {
+    const nome = req.body.nome;
+    const prodotti = await getProdottiByNome(nome);
+    if (prodotti.length === 0) {
+      return res.json({success:false, message: 'Nessun prodotto trovato con questo nome' });
+    }else{
+      return res.json({success:true,prodotti});
+    }
+  } catch (error) {
+    console.error('Errore nella ricerca prodotti:', error);
+    res.json({success:false, error: 'Errore interno del server' });
+  }
+});
 
 app.get('/prodotti/prezzo', async (req, res) => {
   try {
