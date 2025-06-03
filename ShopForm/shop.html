@@ -24,31 +24,32 @@
     <div class="top-bar">
         <span class="filtro" onclick="toggleSidebar()">🔍 Filtro</span>
         <div class="search-box">
-            <input type="text" placeholder="Cerca prodotti...">
-            <button>Cerca</button>
+            <input type="text" id="filtroNome" placeholder="Cerca prodotti...">
+            <button onclick="ricercaNome()">Cerca</button>
         </div>
     </div>
 
     <div class="main-container">
         <aside class="sidebar-slide" id="filtriBox">
             <h1>Filtri:</h1><br>
+
             <h2>Categoria</h2>
-            <label>Uomo<input type="checkbox" id="genereUomo"></input><br>
-                <label>Donna</label><input type="checkbox" id="genereDonna"></input><br>
-                <label>Bambino</label><input type="checkbox" id="genereBambino"></input><br>
-                <label>Bambina</label><input type="checkbox" id="genereBambina"></input><br>
-                <label>UniSex</label><input type="checkbox" id="genereUni"></input><br><br>
-                <h2>Prezzo</h2>
-                <label>Prezzo Crescente</label><input type="checkbox" id="prezzoCrescente"></input><br>
-                <label>Prezzo decrescente</label><input type="checkbox" id="prezzoDecrescente"></input><br><br>
-                <h2>Disponibilità</h2>
-                <label>Disponibili Ora</label><input type="checkbox" id="disponibilità"></input><br><br>
+            <label><input type="checkbox" id="genereUomo"> Uomo</label><br>
+            <label><input type="checkbox" id="genereDonna"> Donna</label><br>
+            <label><input type="checkbox" id="genereBambino"> Bambino</label><br>
+            <label><input type="checkbox" id="genereBambina"> Bambina</label><br>
+            <label><input type="checkbox" id="genereUni"> UniSex</label><br><br>
 
-                <h2>Artigiano:</h2>
-                <label>kudvgwiyh</label><input type="checkbox" id="art1"></input><br>
+            <h2>Prezzo</h2>
+            <label><input type="checkbox" id="prezzoCrescente"> Prezzo Crescente</label><br>
+            <label><input type="checkbox" id="prezzoDecrescente"> Prezzo Decrescente</label><br><br>
 
-                <button onclick="applicaFiltri()">Applica Filtri</button>
+            <h2>Disponibilità</h2>
+            <label><input type="checkbox" id="disponibilità"> Disponibili Ora</label><br><br>
+
+            <button onclick="applicaFiltri()">Applica Filtri</button>
         </aside>
+
         <div class="prodotti" id="prodotti">
 
             <!--
