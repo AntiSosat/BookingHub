@@ -287,25 +287,32 @@ async function modificaProdotto() {
   const prezzo = parseFloat(document.getElementById("mod-prezzo").value.trim());
   const disponibilita = parseInt(document.getElementById("mod-disponibilita").value.trim());
   const descrizione = document.getElementById("mod-descrizione").value.trim();
-  const categoria = document.getElementById("mod-categoria").value.trim();
-
+  const categoria = document.getElementById("mod-categoria");
   const modImgElem = document.getElementById("mod-immagine");
-  const immagineInput = modImgElem ? modImgElem.value.trim() : "";
+  const immagineInput = modImgElem;
 
-  let payload = { id, nome, prezzo, disponibilita, descrizione, categoria };
 
-  if (immagineInput !== "") {
-    payload.immagine = immagineInput;
+  const formData = new FormData();
+  formData.append("id", id);
+  formData.append("nome", nome);
+  formData.append("prezzo", prezzo);
+  formData.append("disponibilita", disponibilita);
+  formData.append("descrizione", descrizione);
+  formData.append("categoria", categoria);
+
+  if (immagineInput.files.length > 0) {
+    formData.append("immagine", immagineInput.files[0]);
   }
+
 
   const res = await fetch("/prodotto/modifica", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: formData
   });
 
   const data = await res.json();
-  if (!res.ok) {
+  
+if (!res.ok || !data.success) {
     alert("Errore: " + data.error);
     return;
   }
