@@ -354,34 +354,70 @@ app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
 
 
 //artigiano modifica prodotto
-app.put('/prodotto/modifica', async (req, res) => {
+// app.put('/prodotto/modifica', async (req, res) => {
+//   const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
+
+//   if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+//   try {
+//     const result = await client.query(`
+//       UPDATE prodotti
+//       SET nome = $1,
+//           prezzo = $2,
+//           disponibilita = $3,
+//           descrizione = $4,
+//           categoria = $5
+//       WHERE id = $6
+//       RETURNING *`,
+//       [nome, prezzo, disponibilita, descrizione, categoria, id]
+//     );
+
+//     if (result.rowCount === 0) {
+//       return res.status(404).json({ error: 'Prodotto non trovato' });
+//     }
+
+//     res.json(result.rows[0]);
+//   } catch (error) {
+//     console.error('Errore nella modifica del prodotto:', error);
+//     res.status(500).json({ error: 'Errore interno del server' });
+//   }
+// });
+app.put('/prodotto/modifica', upload.single('immagine'), async (req, res) => {
   const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
 
   if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
 
+  let query = `
+    UPDATE prodotti
+    SET nome = $1,
+        prezzo = $2,
+        disponibilita = $3,
+        descrizione = $4,
+        categoria = $5`;
+  const values = [nome, prezzo, disponibilita, descrizione, categoria];
+
+  if (req.file) {
+    query += `, immagine = $6 WHERE id = $7 RETURNING *`;
+    values.push(req.file.buffer, id);
+  } else {
+    query += ` WHERE id = $6 RETURNING *`;
+    values.push(id);
+  }
+
   try {
-    const result = await client.query(`
-      UPDATE prodotti
-      SET nome = $1,
-          prezzo = $2,
-          disponibilita = $3,
-          descrizione = $4,
-          categoria = $5
-      WHERE id = $6
-      RETURNING *`,
-      [nome, prezzo, disponibilita, descrizione, categoria, id]
-    );
+    const result = await client.query(query, values);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Prodotto non trovato' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ success: true, prodotto: result.rows[0] });
   } catch (error) {
     console.error('Errore nella modifica del prodotto:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
+
 
 //artigiano elimina prodotto
 app.delete('/prodotto/elimina', async (req, res) => {
