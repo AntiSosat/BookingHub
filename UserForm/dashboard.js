@@ -218,34 +218,34 @@ async function aggiungiProdotto(email) {
     const disponibilita = parseInt(document.getElementById("disponibilita-nuovo").value.trim());
     const descrizione = document.getElementById("descrizione-nuovo").value.trim();
     const categoria = document.getElementById("categoria-nuovo").value.trim();
-    const immagine = document.getElementById("immagine-nuovo").value.trim();
+    const immagine = document.getElementById("immagine-nuovo");
 
     if (!nome || isNaN(prezzo) || isNaN(disponibilita)) {
       alert("Compila tutti i campi obbligatori (nome, prezzo, disponibilità).");
       return;
     }
 
-    const prodotto = {
-      nome,
-      prezzo,
-      disponibilita,
-      descrizione,
-      categoria,
-      immagine,
-      idVenditore
-    };
+
+    const formData = new FormData();
+    formData.append("nome", nome);
+    formData.append("prezzo", prezzo);
+    formData.append("disponibilita", disponibilita);
+    formData.append("descrizione", descrizione);
+    formData.append("categoria", categoria);
+    formData.append("idVenditore", idVenditore);
+
+    if (immagine.files.length > 0) {
+      formData.append("immagine", immagine.files[0]);
+    }
 
     const res = await fetch("/prodotto/aggiungi", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(prodotto)
+      body: formData
     });
 
     const data = await res.json();
 
-    if (!res.ok) {
+    if (!res.ok || !data.success) {
       alert("Errore durante l'aggiunta del prodotto: " + (data.error || "Errore generico."));
       return;
     }

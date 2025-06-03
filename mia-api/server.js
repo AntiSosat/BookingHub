@@ -5,6 +5,12 @@ const { get } = require('http');
 const app = express();
 app.use(express.json());
 
+//per le immagini 
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+
 // Connessione al database
 const client = new Client({
   user: 'postgres.ajexsiyipavyjrkseedr',
@@ -310,23 +316,42 @@ app.post('/aggiungiProdotto', async (req, res) => {
 });
 
 //artigiano aggiungi prodotto
-app.post('/prodotto/aggiungi', async (req, res) => {
-  const { categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione } = req.body;
+// app.post('/prodotto/aggiungi', async (req, res) => {
+//   const { categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione } = req.body;
+
+//   try {
+//     const result = await client.query(`
+//       INSERT INTO prodotti (categoria, prezzo, disponibilita, ivavenditore, nome, immagine, descrizione)
+//       VALUES ($1, $2, $3, $4, $5, $6, $7)
+//       RETURNING *`,
+//       [categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione]
+//     );
+
+//     res.status(201).json(result.rows[0]);
+//   } catch (error) {
+//     console.error('Errore durante l\'aggiunta del prodotto:', error);
+//     res.status(500).json({ error: 'Errore interno del server.' });
+//   }
+// });
+app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
+  const { categoria, prezzo, disponibilita, idVenditore, nome, descrizione } = req.body;
+  let immagineBuffer = req.file ? req.file.buffer : null;
 
   try {
     const result = await client.query(`
       INSERT INTO prodotti (categoria, prezzo, disponibilita, ivavenditore, nome, immagine, descrizione)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`,
-      [categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione]
+      [categoria, prezzo, disponibilita, idVenditore, nome, immagineBuffer, descrizione]
     );
-
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ success: true, prodotto: result.rows[0] });
   } catch (error) {
-    console.error('Errore durante l\'aggiunta del prodotto:', error);
+    console.error("Errore durante l'aggiunta del prodotto:", error);
     res.status(500).json({ error: 'Errore interno del server.' });
   }
 });
+
+
 
 //artigiano modifica prodotto
 app.put('/prodotto/modifica', async (req, res) => {
