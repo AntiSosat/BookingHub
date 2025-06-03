@@ -134,10 +134,22 @@ async function caricaStatisticheOrdini(email) {
       <p>🛍️ Prodotti acquistati: ${prodotti.totale_prodotti}</p>
       <p>💰 Totale speso: €${spesa.totale_speso}</p>
     `;
+
+
+    if (!ordini.numero_ordini && !prodotti.totale_prodotti && !spesa.totale_speso) {
+      document.getElementById("order-history").innerHTML = 
+        "<p class='no-orders'>Non hai ancora effettuato ordini</p>";
+    }
+
+
   } catch (error) {
     console.error("Errore nel caricamento statistiche ordini:", error);
     alert("Si è verificato un errore durante il caricamento delle statistiche degli ordini.");
-    return;
+        statistiche.innerHTML = `
+      <p>📦 Ordini effettuati: 0</p>
+      <p>🛍️ Prodotti acquistati: 0</p>
+      <p>💰 Totale speso: €0.00</p>
+    `;;
   }
 }
 

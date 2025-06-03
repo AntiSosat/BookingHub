@@ -545,7 +545,7 @@ app.get('/prodotti/idvenditore', async (req, res) => {
 //Aggiornamento prodotto se viene premuto 2 volte
 app.post('/aggiungiProdottoCarrello', async (req, res) => {
   const { idProdotto, email } = req.body;
-  const quantitaBase = 1; 
+  const quantitaBase = 1;
   try {
     const result = await client.query(
       `UPDATE cart 
@@ -1062,6 +1062,66 @@ app.post('/cart/svuotaCarrello', async (req, res) => {
   } catch (error) {
     console.error('Errore durante lo svuotamento del carrello:', error);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+app.post('/checkout', async (req, res) => {
+  const { clienteId } = req.body;
+  if (!clienteId) return res.status(400).json({ error: "Parametro clienteId mancante" });
+
+const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000).toString());
+
+
+  try {
+    const carrelloRes = await client.query(
+      'SELECT idprodotto, quantita FROM cart WHERE emailcliente = $1',
+      [clienteId]
+    );
+    const carrello = carrelloRes.rows;
+
+    if (carrello.length === 0) {
+      return res.status(400).json({ error: 'Carrello vuoto' });
+    }
+
+    for (const item of carrello) {
+      const { idprodotto, quantita } = item;
+
+      const venditoreRes = await client.query(
+        'SELECT ivavenditore FROM prodotti WHERE id = $1',
+        [idprodotto]
+      );
+
+      if (venditoreRes.rowCount === 0) continue;
+
+      const venditore = venditoreRes.rows[0].ivavenditore;
+
+      // Prova a fare insert, se fallisce per chiave duplicata fai update
+      try {
+        await client.query(
+          'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+          [ordineId, clienteId, venditore, idprodotto, quantita]
+        );
+      } catch (insertError) {
+        if (insertError.code === '23505') {
+          // Chiave duplicata: aggiorna la quantità
+          await client.query(
+            'UPDATE ordine SET quantita = quantita + $1 WHERE prodotto = $2',
+            [quantita, idprodotto]
+          );
+        } else {
+          console.error("Errore durante INSERT:", insertError);
+          throw insertError;
+        }
+      }
+    }
+
+    // Svuota carrello dopo completamento
+    await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
+
+    res.json({ success: true, ordineId });
+  } catch (error) {
+    console.error("Errore durante il checkout:", error.message);
+    res.status(500).json({ error: 'Errore interno server durante il checkout' });
   }
 });
 
