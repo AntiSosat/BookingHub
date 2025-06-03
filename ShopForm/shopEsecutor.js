@@ -6,10 +6,10 @@
 //     const email = urlParams.get('email') || urlParams.get('id');
 //     return (email && email !== "null") ? email : null;
 // }
-
+let email;
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    let email = urlParams.get('id') || urlParams.get('email');
+    email = urlParams.get('id') || urlParams.get('email');
     if (email && email !== "null") {
         sessionStorage.setItem("userEmail", email);
         console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
@@ -40,27 +40,27 @@ function carrelloPersonale() {
     location.href = `../CartForm/cart.html?id=${email}`;
 }
 
-function aggiuntaProdottoCarrello(idProdotto, email) {
-    fetch("/aggiungiProdottoCarrello", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ idProdotto, email })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert("Prodotto aggiunto al carrello con successo!");
-            } else {
-                alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
-            }
+async function aggiuntaProdottoCarrello(idProdotto, email) {
+    try {
+        const response = await fetch("/aggiungiProdottoCarrello", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ idProdotto, email })
         })
-        .catch(error => {
-            alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
-        });
+        const result = await response.json();
+        console.log("Risultato dell'aggiunta al carrello:", result);
+        if (result.success) {
+            alert("Prodotto aggiunto al carrello con successo!");
+        } else {
+            alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
+        }
+    } catch (error) { 
+        console.error("Errore durante l'aggiunta del prodotto al carrello:", error);
+        alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
+    }
 }
-
 document.addEventListener("DOMContentLoaded", async function () {
 
     const email = getParametro();
@@ -71,49 +71,45 @@ document.addEventListener("DOMContentLoaded", async function () {
         return;
     }
     const prodotti = await restituisciTuttiProdotti();
-if (prodotti && Object.keys(prodotti).length > 0) {
-        Object.values(prodotti).forEach(prodotto => {
-            const prodottiContainer = document.getElementById("prodotti");
-
-            // Crea il div principale del prodotto
-            const productDiv = document.createElement("div");
-            productDiv.className = "product";
-            productDiv.onclick = () => {
-                sessionStorage.setItem("idProduct", prodotto.id); // Salva l'ID del prodotto in sessionStorage
-                location.href = `InfoProdottoSpec.html?id=${prodotto.id},${email}`; // Reindirizza alla pagina delle specifiche del prodotto
-            };
-
-            // Crea e aggiungi l'immagine
-            const img = document.createElement("img");
-            img.src = prodotto.immagine;
-            img.alt = prodotto.nome;
-            productDiv.appendChild(img);
-
-            // Titolo
-            const h3 = document.createElement("h3");
-            h3.textContent = prodotto.nome;
-            productDiv.appendChild(h3);
-
-            // Prezzo
-            const price = document.createElement("p");
-            price.innerHTML = `<strong> Prezzo: ${prodotto.prezzo} €</strong>`;
-            productDiv.appendChild(price);
-
-            // Bottone
-            const btn = document.createElement("button");
-            btn.textContent = "Aggiungi al carrello";//Aggiungere funzionalità per aggiungere al carrello
-            btn.onclick = (event) => {
-                event.stopPropagation(); // evita il redirect causayo del producDiv.onclick
-                aggiuntaProdottoCarrello(prodotto.id, email);
-            }
-            productDiv.appendChild(btn);
-
-            // Aggiungi tutto al contenitore
-            prodottiContainer.appendChild(productDiv);
-        })
+    stampaProdotti(prodotti);
+    
+});
+ document.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // Previene l'invio del form
+        ricercaNome(); // Chiama la funzione di ricerca
     }
 });
 
+ async function ricercaNome(){
+    document.getElementById("prodotti").innerHTML = "";
+    const nomeRicerca = document.getElementById("filtroNome").value.toLowerCase().trim();
+    document.getElementById("filtroNome").value = ""; // Pulisce il campo di ricerca dopo l'invio
+    document.getElementById("filtroNome").placeholder = "Cerca Prodotti...."; // Pulisce il campo di ricerca dopo l'invio
+    if (!nomeRicerca) {
+        const resultTutti = await restituisciTuttiProdotti();
+        stampaProdotti(resultTutti);
+    }else{
+    try {
+        const response = await fetch("/ricercaProdottiNome", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ nome: nomeRicerca })
+        });
+        const result = await response.json();
+        if(result.success){
+            stampaProdotti(result.prodotti);
+        }else{
+            alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
+            const resultTutti = await restituisciTuttiProdotti();
+            stampaProdotti(resultTutti);
+        }
+    } catch (error) {
+        alert("Errore durante la ricerca dei prodotti: " + error.message);
+    }}
+ }
 
 
 async function restituisciTuttiProdotti() {
@@ -128,6 +124,49 @@ async function restituisciTuttiProdotti() {
         return result;
     } catch (error) {
         alert("Errore durante il recupero dei prodotti: " + error.message);
-        return[];
+        return [];
+    }
+}
+
+function stampaProdotti(prodotti) {
+    if (prodotti && Object.keys(prodotti).length > 0) {
+        const prodottiContainer = document.getElementById("prodotti");
+        const fragment = document.createDocumentFragment();
+        console.log("Prodotti ricevuti:", prodotti);
+        Object.values(prodotti).forEach(prodotto => {
+            const productDiv = document.createElement("div");
+            productDiv.className = "product";
+            productDiv.onclick = () => {
+                sessionStorage.setItem("idProduct", prodotto.id);
+                location.href = `InfoProdottoSpec.html?id=${prodotto.id},${email}`;
+            };
+
+            const img = document.createElement("img");
+            img.src = prodotto.immagine;
+            img.alt = prodotto.nome;
+            img.loading = "lazy"; // Lazy loading
+            productDiv.appendChild(img);
+
+            const h3 = document.createElement("h3");
+            h3.textContent = prodotto.nome;
+            productDiv.appendChild(h3);
+
+            const price = document.createElement("p");
+            price.innerHTML = `<strong> Prezzo: ${prodotto.prezzo} €</strong>`;
+            productDiv.appendChild(price);
+
+            const btn = document.createElement("button");
+            btn.textContent = "Aggiungi al carrello";
+            btn.onclick = (event) => {
+                event.stopPropagation();
+                aggiuntaProdottoCarrello(prodotto.id, email);
+            };
+            productDiv.appendChild(btn);
+
+            fragment.appendChild(productDiv);
+        });
+
+        prodottiContainer.appendChild(fragment);
+        console.log("Prodotti stampati correttamente:", prodotti);
     }
 }
