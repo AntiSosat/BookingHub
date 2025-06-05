@@ -67,7 +67,10 @@ async function caricaStoricoOrdini(email) {
     ordersContainer.classList.add("orders-container");
 
     if (!Array.isArray(uniqueOrdini) || uniqueOrdini.length === 0) {
-      orderList.innerHTML = "<li>Nessun ordine trovato</li>";
+      orderList.innerHTML = `<div class="no-orders">
+      Nessun ordine trovato!<br><br>
+         Quando effettuerai un acquisto, lo troverai qui!
+      </div>`;
       return;
     }
 
@@ -86,30 +89,48 @@ async function caricaStoricoOrdini(email) {
         content.classList.toggle("hidden");
       });
 
-      ordineCard.appendChild(header);
-
       const prodottiRes = await fetch(`/ordine/prodotti?cliente=${email}&ordine=${ordineId}`);
       const prodotti = await prodottiRes.json();
 
-      if (Array.isArray(prodotti) && prodotti.length > 0) {
-        const ul = document.createElement("ul");
-        for (const prodottoId of prodotti) {
-          const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
-          const prodottoInfo = await prodottoInfoRes.json();
-          const li = document.createElement("li");
-          li.textContent = prodottoInfo?.nome || 'NOME NON TROVATO';
-          ul.appendChild(li);
-        }
-        content.appendChild(ul);
-      } else {
-        const p = document.createElement("p");
-        p.textContent = "Nessun prodotto in questo ordine.";
-        content.appendChild(p);
+      const ul = document.createElement("ul");
+      let prodottiValidi = 0;
+
+      if (!Array.isArray(prodotti)) {
+        console.error("Prodotti non validi o errore dal backend:", prodotti);
+        continue; // Skippa questo ordine per evitare crash
       }
 
-      ordineCard.appendChild(content);
-      ordersContainer.appendChild(ordineCard);
+      for (const item of prodotti) {
+        console.log("Item ricevuto:", item);  
+
+        const prodottoId = item.prodotto;
+        const quantita = item.quantita;
+
+        if (!prodottoId || quantita === undefined) {
+          console.warn("Quantità assente per prodotto", item);
+          continue;
+        }
+
+        const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
+        const prodottoInfo = await prodottoInfoRes.json();
+
+        if (prodottoInfo?.nome) {
+          const li = document.createElement("li");
+          li.textContent = `${prodottoInfo.nome} x${quantita}`;
+          ul.appendChild(li);
+          prodottiValidi++;
+        }
+      }
+
+
+      if (prodottiValidi > 0) {
+        content.appendChild(ul);
+        ordineCard.appendChild(header);
+        ordineCard.appendChild(content);
+        ordersContainer.appendChild(ordineCard);
+      }
     }
+
 
     orderList.appendChild(ordersContainer);
   } catch (error) {
@@ -129,15 +150,20 @@ async function caricaStatisticheOrdini(email) {
       fetch(`/stat/spesa?cliente=${email}`).then(res => res.json())
     ]);
 
+    const numeroOrdini = ordini.numero_ordini || 0;
+    const totaleProdotti = prodotti.totale_prodotti || 0;
+    const totaleSpeso = spesa.totale_speso || 0;
+
     statistiche.innerHTML = `
-      <p>📦 Ordini effettuati: ${ordini.numero_ordini}</p>
-      <p>🛍️ Prodotti acquistati: ${prodotti.totale_prodotti}</p>
-      <p>💰 Totale speso: €${spesa.totale_speso}</p>
+      <p>📦 Ordini effettuati: ${numeroOrdini}</p>
+      <p>🛍️ Prodotti acquistati: ${totaleProdotti}</p>
+      <p>💰 Totale speso: €${totaleSpeso}</p>
     `;
 
 
-    if (!ordini.numero_ordini && !prodotti.totale_prodotti && !spesa.totale_speso) {
-      document.getElementById("order-history").innerHTML = 
+
+if (numeroOrdini === 0 && totaleProdotti === 0 && totaleSpeso === 0) {
+        document.getElementById("order-history").innerHTML =
         "<p class='no-orders'>Non hai ancora effettuato ordini</p>";
     }
 
@@ -145,7 +171,7 @@ async function caricaStatisticheOrdini(email) {
   } catch (error) {
     console.error("Errore nel caricamento statistiche ordini:", error);
     alert("Si è verificato un errore durante il caricamento delle statistiche degli ordini.");
-        statistiche.innerHTML = `
+    statistiche.innerHTML = `
       <p>📦 Ordini effettuati: 0</p>
       <p>🛍️ Prodotti acquistati: 0</p>
       <p>💰 Totale speso: €0.00</p>
@@ -252,10 +278,10 @@ async function aggiungiProdotto(email) {
 
     alert("Prodotto aggiunto con successo!");
     document.getElementById("popup-prodotti").classList.add("hidden");
-    
+
     // Aggiorna il contatore dei prodotti
     await caricaDatiVenditore(email);
-    
+
   } catch (error) {
     console.error("Errore in aggiungiProdotto:", error);
     alert("Errore durante l'aggiunta del prodotto.");
@@ -311,8 +337,8 @@ async function modificaProdotto() {
   });
 
   const data = await res.json();
-  
-if (!res.ok || !data.success) {
+
+  if (!res.ok || !data.success) {
     alert("Errore: " + data.error);
     return;
   }
@@ -388,7 +414,7 @@ function caricaDatiUtente(email, tipo) {
 document.addEventListener("DOMContentLoaded", async () => {
   const email = getParametro();
   const role = getUserRole();
-  
+
   try {
     if (!email || !role) {
       alert("Sessione non trovata. Effettua il login.");
@@ -425,7 +451,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       nascondiTuttiForms();
       document.getElementById("popup-title").textContent = "Visualizza Prodotti";
       document.getElementById("popup-prodotti").classList.remove("hidden");
-      
+
       const email = getParametro();
       await caricaProdottiVenditore(email);
     });
@@ -450,7 +476,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("popup-title").textContent = "Modifica Prodotti";
       document.getElementById("form-modifica").classList.remove("hidden");
       document.getElementById("popup-prodotti").classList.remove("hidden");
-      
+
       await popolaSelectModifica();
     });
 
@@ -471,7 +497,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("popup-title").textContent = "Elimina Prodotto";
       document.getElementById("form-elimina").classList.remove("hidden");
       document.getElementById("popup-prodotti").classList.remove("hidden");
-      
+
       await popolaSelectElimina();
     });
 
