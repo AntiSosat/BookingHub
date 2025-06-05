@@ -296,12 +296,16 @@ async function pagaaaree() {
 
   prodottiNelCarrello.forEach(item => {
     const nome = item.querySelector(".description").textContent;
-    const prezzo = parseFloat(item.querySelector(".price").textContent.replace("€", "").trim());
+    const prezzoTotale = parseFloat(item.querySelector(".price").textContent.replace("€", "").trim());
     const quantita = parseInt(item.querySelector(".qty-value").textContent, 10);
+    const prezzoUnitario = prezzoTotale / quantita;
+
     const li = document.createElement("li");
-    li.textContent = `${nome} x${quantita} - € ${(prezzo * quantita).toFixed(2)}`;
+    li.textContent = `${nome} x${quantita} - € ${(prezzoUnitario * quantita).toFixed(2)}`;
     popupSummary.appendChild(li);
-    totale += prezzo * quantita;
+
+    totale += prezzoUnitario * quantita;
+
   });
 
   const totalItem = document.createElement("li");

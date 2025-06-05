@@ -32,8 +32,8 @@ async function getOrdiniCliente(email) { //clienteId
 }
 
 async function getProdottiOrdine(clienteId, ordineId) {
-  const result = await client.query('SELECT prodotto FROM ordine WHERE cliente = $1 AND id = $2', [clienteId, ordineId]);
-  return result.rows.map(row => row.prodotto);
+  const result = await client.query('SELECT prodotto, quantita FROM ordine WHERE cliente = $1 AND id = $2', [clienteId, ordineId]);
+  return result.rows; //.rows.map(row => row.prodotto);
 }
 
 async function getClientOrdine(ordineId) {
@@ -1158,37 +1158,56 @@ const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000)
       return res.status(400).json({ error: 'Carrello vuoto' });
     }
 
+    // for (const item of carrello) {
+    //   const { idprodotto, quantita } = item;
+
+    //   const venditoreRes = await client.query(
+    //     'SELECT ivavenditore FROM prodotti WHERE id = $1',
+    //     [idprodotto]
+    //   );
+
+    //   if (venditoreRes.rowCount === 0) continue;
+
+    //   const venditore = venditoreRes.rows[0].ivavenditore;
+
+    //   // Prova a fare insert, se fallisce per chiave duplicata fai update
+    //   try {
+    //     await client.query(
+    //       'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+    //       [ordineId, clienteId, venditore, idprodotto, quantita]
+    //     );
+    //   } catch (insertError) {
+    //     if (insertError.code === '23505') {
+    //       // Chiave duplicata: aggiorna la quantità
+    //       await client.query(
+    //         'UPDATE ordine SET quantita = quantita + $1 WHERE prodotto = $2',
+    //         [quantita, idprodotto]
+    //       );
+    //     } else {
+    //       console.error("Errore durante INSERT:", insertError);
+    //       throw insertError;
+    //     }
+    //   }
+    // }
+
     for (const item of carrello) {
-      const { idprodotto, quantita } = item;
+  const { idprodotto, quantita } = item;
 
-      const venditoreRes = await client.query(
-        'SELECT ivavenditore FROM prodotti WHERE id = $1',
-        [idprodotto]
-      );
+  const venditoreRes = await client.query(
+    'SELECT ivavenditore FROM prodotti WHERE id = $1',
+    [idprodotto]
+  );
 
-      if (venditoreRes.rowCount === 0) continue;
+  if (venditoreRes.rowCount === 0) continue;
 
-      const venditore = venditoreRes.rows[0].ivavenditore;
+  const venditore = venditoreRes.rows[0].ivavenditore;
 
-      // Prova a fare insert, se fallisce per chiave duplicata fai update
-      try {
-        await client.query(
-          'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
-          [ordineId, clienteId, venditore, idprodotto, quantita]
-        );
-      } catch (insertError) {
-        if (insertError.code === '23505') {
-          // Chiave duplicata: aggiorna la quantità
-          await client.query(
-            'UPDATE ordine SET quantita = quantita + $1 WHERE prodotto = $2',
-            [quantita, idprodotto]
-          );
-        } else {
-          console.error("Errore durante INSERT:", insertError);
-          throw insertError;
-        }
-      }
-    }
+  // Inserisci SEMPRE una nuova riga per ogni prodotto di questo ordine
+  await client.query(
+    'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+    [ordineId, clienteId, venditore, idprodotto, quantita]
+  );
+}
 
     // Svuota carrello dopo completamento
     await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
