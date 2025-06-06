@@ -167,6 +167,7 @@ async function getTotaleProdottiAcquistati(email) {
   return result.rows[0];
 }
 
+//per le stats
 async function getTotaleSpesaCliente(email) {
   const result = await client.query(`
     SELECT SUM(o.quantita * p.prezzo) AS totale_speso
@@ -176,6 +177,18 @@ async function getTotaleSpesaCliente(email) {
   `, [email]);
   return result.rows[0];
 }
+
+//per le card ordine
+async function getTotaleOrdine(clienteId, ordineId) {
+  const result = await client.query(`
+    SELECT SUM(o.quantita * p.prezzo) AS totale
+    FROM ordine o
+    JOIN prodotti p ON o.prodotto = p.id
+    WHERE o.cliente = $1 AND o.id = $2
+  `, [clienteId, ordineId]);
+  return result.rows[0]?.totale || 0;
+}
+
 
 // Funzioni per aggiungere dati
 app.get('/Cart/idProdotti', async (req, res) => {
@@ -858,18 +871,36 @@ app.get('/ordine/prodotti', async (req, res) => {
   }
 });
 
+// app.get('/ordine/venditore', async (req, res) => {
+//   const ordineId = req.query.id;
+//   if (!ordineId) {
+//     return res.status(400).json({ error: 'Parametro "id" mancante ' });
+//   }
+
+//   const result = await getVenditoriOrdine(ordineId);
+//   if (result.length === 0) {
+//     return res.status(404).json({ error: 'Ordine non trovato ' });
+//   }
+
+//   res.json({ venditore: result[0].venditore });
+// });
+
 app.get('/ordine/venditore', async (req, res) => {
-  const ordineId = req.query.id;
-  if (!ordineId) {
-    return res.status(400).json({ error: 'Parametro "id" mancante ' });
+  const ivaVenditore = req.query.ivavenditore;
+  if (!ivaVenditore) {
+    return res.status(400).json({ error: 'Parametro "ivavenditore" mancante' });
   }
 
-  const result = await getVenditoriOrdine(ordineId);
-  if (result.length === 0) {
-    return res.status(404).json({ error: 'Ordine non trovato ' });
+  try {
+    const result = await client.query(
+      'SELECT * FROM ordine WHERE venditore = $1',
+      [ivaVenditore]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Errore nella query ordini per venditore', err);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
-
-  res.json({ venditore: result[0].venditore });
 });
 
 app.get('/ordine/cliente', async (req, res) => {
@@ -1272,6 +1303,21 @@ app.get('/stat/spesa', async (req, res) => {
   } catch (err) {
     console.error('Errore totale spesa:', err);
     res.status(500).json({ error: 'Errore server' });
+  }
+});
+
+app.get('/ordine/totale', async (req, res) => {
+  const clienteId = req.query.cliente;
+  const ordineId = req.query.ordine;
+  if (!clienteId || !ordineId) {
+    return res.status(400).json({ error: 'Parametri "cliente" e "ordine" mancanti' });
+  }
+  try {
+    const totale = await getTotaleOrdine(clienteId, ordineId);
+    res.json({ totale });
+  } catch (err) {
+    console.error('Errore nel calcolo totale ordine:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 
