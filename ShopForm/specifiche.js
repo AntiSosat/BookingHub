@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const img = document.createElement("img");
     img.src = prodottoSpecifico[0].immagine;
     img.alt = prodottoSpecifico[0].nome || "Nome del Prodotto";
+    img.loading = "lazy";
     imageSection.appendChild(img);
 
     // Sezione dettagli
@@ -87,14 +88,23 @@ document.addEventListener("DOMContentLoaded", async function () {
     price.textContent = prodottoSpecifico[0].prezzo + " €";
 
     // Pulsante acquisto
+    let acquisto
     const buySection = document.createElement("div");
+    if(prodottoSpecifico[0].disponibilita === "0") {
     buySection.className = "buy-section";
-    const button = document.createElement("button");
-    button.textContent = "Aggiungi al Carrello";
-    button.onclick = () => {
+    acquisto = document.createElement("button");
+    acquisto.textContent = "Prodotto non disponibile";
+    acquisto.disabled = true;
+    acquisto.className = "disabled-button";
+    }else{
+    buySection.className = "buy-section";
+    acquisto = document.createElement("button");
+    acquisto.textContent = "Aggiungi al Carrello";
+    acquisto.onclick = () => {
         aggiuntaProdottoCarrello(idProdotto, email);
     }
-    buySection.appendChild(button);
+}
+    buySection.appendChild(acquisto);
 
     // Appendi tutto alla sezione dettagli
     detailsSection.appendChild(title);
@@ -126,7 +136,7 @@ async function restituisciProdottiSpec(idProdotto) {
             throw new Error("Errore nella risposta dal server");
         }
         const result = await response.json();
-        return result.dati;
+        return result.prodotti;
     } catch (error) {
         return null;
     }

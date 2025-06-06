@@ -104,9 +104,9 @@ async function getVenditoreProdotto(idprodotto) {
   return result.rows.map(row => row.idvenditore);
 }
 
-async function getCategoriaProdotto(idprodotto) {
-  const result = await client.query('SELECT categoria FROM prodotti WHERE id = $1', [idprodotto]);
-  return result.rows.map(row => row.categoria);
+async function getCategoriaProdotto(query) {
+  const result = await client.query(query);
+  return result.rows;
 }
 
 async function getNomeCliente(email) { //id
@@ -577,7 +577,7 @@ app.post('/aggiungiProdottoCarrello', async (req, res) => {
       }
     } else {
       console.log("Prodotto aggiornato:", result.rows[0]);
-      return res.json({success: true, message: "Prodotto aggiornato con successo."});
+      return res.json({ success: true, message: "Prodotto aggiornato con successo." });
     }
   } catch (error) {
     console.error("Errore durante l'incremento della quantità:", error);
@@ -606,7 +606,7 @@ app.post('/prodotti', async (req, res) => {
       };
     });
 
-    res.json(prodottiConvertiti);
+    res.json({ success: true, prodotti: prodottiConvertiti });
 
   } catch (err) {
     console.error('Errore nella query prodotti', err);
@@ -629,13 +629,31 @@ app.post('/ricercaProdottiNome', async (req, res) => {
     const nome = req.body.nome;
     const prodotti = await getProdottiByNome(nome);
     if (prodotti.length === 0) {
-      return res.json({success:false, message: 'Nessun prodotto trovato con questo nome' });
-    }else{
-      return res.json({success:true,prodotti});
+      return res.json({ success: false, message: 'Nessun prodotto trovato con questo nome' });
+    } else {
+
+      // Mappa ogni prodotto e converte l'immagine bytea in data URI
+      const prodottiConvertiti = prodotti.map(prodotto => {
+        let immagineBase64 = null;
+
+        if (prodotto.immagine) {
+          // Supponiamo che siano immagini PNG, altrimenti cambia in image/jpeg ecc.
+          const mimeType = 'image/png';
+          const base64 = prodotto.immagine.toString('base64');
+          immagineBase64 = `data:${mimeType};base64,${base64}`;
+        }
+
+        return {
+          ...prodotto,
+          immagine: immagineBase64
+        };
+      });
+
+      res.json({ success: true, prodotti: prodottiConvertiti });
     }
   } catch (error) {
     console.error('Errore nella ricerca prodotti:', error);
-    res.json({success:false, error: 'Errore interno del server' });
+    res.json({ success: false, error: 'Errore interno del server' });
   }
 });
 
@@ -683,13 +701,29 @@ app.post('/prodottobyId', async (req, res) => {
     }
 
     const result = await getProdottibyID(id);
-    console.log(result);
     if (result.length === 0) {
       return res.json({ error: 'Prodotto non trovato ' });
+    } else {
+
+      // Mappa ogni prodotto e converte l'immagine bytea in data URI
+      const prodottiConvertiti = result.map(prodotto => {
+        let immagineBase64 = null;
+
+        if (prodotto.immagine) {
+          // Supponiamo che siano immagini PNG, altrimenti cambia in image/jpeg ecc.
+          const mimeType = 'image/png';
+          const base64 = prodotto.immagine.toString('base64');
+          immagineBase64 = `data:${mimeType};base64,${base64}`;
+        }
+
+        return {
+          ...prodotto,
+          immagine: immagineBase64
+        };
+      });
+
+      res.json({ success: true, prodotti: prodottiConvertiti });
     }
-
-    res.json({ dati: result });
-
   } catch (err) {
     console.error('Errore nel recupero del nome prodotto ', err);
     res.json({ error: 'Errore interno del server ' });
@@ -759,24 +793,35 @@ app.get('/prodotto/venditore', async (req, res) => {
   }
 });
 
-app.get('/prodotto/categoria', async (req, res) => {
+app.post('/prodottoByCategoria', async (req, res) => {
   try {
-    const id = req.query.id;
-    if (!id) {
-      return res.status(400).json({ error: 'Parametro "id" mancante ' });
+    const query = req.body.query;
+    if (!query) {
+      return res.json({ success: false, message: 'Parametro "id" mancante ' });
     }
+    const result = await getCategoriaProdotto(query);
 
-    const result = await getCategoriaProdotto(id);
+    // Mappa ogni prodotto e converte l'immagine bytea in data URI
+    const prodottiConvertiti = result.map(prodotto => {
+      let immagineBase64 = null;
 
-    if (result.length === 0) {
-      return res.status(404).json({ error: 'Prodotto non trovato ' });
-    }
+      if (prodotto.immagine) {
+        // Supponiamo che siano immagini PNG, altrimenti cambia in image/jpeg ecc.
+        const mimeType = 'image/png';
+        const base64 = prodotto.immagine.toString('base64');
+        immagineBase64 = `data:${mimeType};base64,${base64}`;
+      }
 
-    res.json({ categoria: result[0].categoria });
+      return {
+        ...prodotto,
+        immagine: immagineBase64
+      };
+    });
 
+    res.json({ success: true, prodotti: prodottiConvertiti });
   } catch (err) {
     console.error('Errore nel recupero della categoria prodotto ', err);
-    res.status(500).json({ error: 'Errore interno del server ' });
+    res.json({ success: false, message: 'Errore interno del server ' });
   }
 });
 
