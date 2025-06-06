@@ -1,23 +1,18 @@
-// const email = getParametro();
+let idUtente;
 
-
-// function getParametro() {
-//     const urlParams = new URLSearchParams(window.location.search);
-//     const email = urlParams.get('email') || urlParams.get('id');
-//     return (email && email !== "null") ? email : null;
-// }
-let email;
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    email = urlParams.get('id') || urlParams.get('email');
-    if (email && email !== "null") {
-        sessionStorage.setItem("userEmail", email);
-        console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
+    idUtente = urlParams.get('userEmail');
+
+    if (idUtente && idUtente !== "null") {
+        sessionStorage.setItem("userEmail", idUtente);
+        console.log("userId salvato in sessionStorage:", idUtente);
     } else {
-        email = sessionStorage.getItem("userEmail");
-        console.log("userEmail presa in sessionStorage:", sessionStorage.getItem("userEmail"));
+        idUtente = sessionStorage.getItem("userEmail");
+        console.log("userId preso da sessionStorage:", idUtente);
     }
-    return email ? email : null;
+
+    return idUtente || null;
 }
 
 function getUserRole() {
@@ -30,25 +25,17 @@ function toggleSidebar() {
 }
 
 function accountPersonale() {
-    const email = getParametro();
-    console.log("EMAIL PRIMA DEL REDIRECT DASHBOARD:", email);   //non ancora testato ma credo sia la stessa cosa di sotto , `../UserForm/dashboard.html?email=${email}
-    location.href = `../UserForm/dashboard.html?id=${email}`;
+    const idUtente = getParametro();
+    location.href = `../UserForm/dashboard.html?id=${idUtente}`;
 }
+
 function carrelloPersonale() {
-    const email = getParametro();
-    console.log("EMAIL PRIMA DEL REDIRECT:", email);  //ora ok funziona, prima dava null con sotto  ../CartForm/cart.html?email=${email}
-    location.href = `../CartForm/cart.html?id=${email}`;
+    const idUtente = getParametro();
+    location.href = `../CartForm/cart.html?id=${idUtente}`;
 }
 
-async function aggiuntaProdottoCarrello(idProdotto, email) {
 
-    const resp = await fetch(`/prodotto/disponibilita?id=${idProdotto}`);
-    const data = await resp.json();
-    if (data.disponibilita <= 0) { 
-        alert("Prodotto esaurito");
-        return;
-    }
-
+async function aggiuntaProdottoCarrello(idProdotto, idUtente) {
 
     try {
         const response = await fetch("/aggiungiProdottoCarrello", {
@@ -56,49 +43,53 @@ async function aggiuntaProdottoCarrello(idProdotto, email) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ idProdotto, email })
-        })
+            body: JSON.stringify({ idProdotto, email: idUtente }) // backend usa ancora "email"?
+        });
+
         const result = await response.json();
         console.log("Risultato dell'aggiunta al carrello:", result);
+
         if (result.success) {
             alert("Prodotto aggiunto al carrello con successo!");
         } else {
-            alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
+            alert("Errore nell'aggiunta del prodotto al carrello: " + result.message);
         }
     } catch (error) {
-        console.error("Errore durante l'aggiunta del prodotto al carrello:", error);
         alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
     }
 }
-document.addEventListener("DOMContentLoaded", async function () {
 
-    const email = getParametro();
-    if (!email) {
+document.addEventListener("DOMContentLoaded", async function () {
+    const idUtente = getParametro();
+
+    if (!idUtente) {
         alert("Sessione non trovata. Effettua il login.");
-        console.log("Email di sessione: ", email);
         location.href = "../LoginForm/login-registration.html";
         return;
     }
+
     const prodotti = await restituisciTuttiProdotti();
     stampaProdotti(prodotti);
-
 });
 document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
-        event.preventDefault(); // Previene l'invio del form
-        ricercaNome(); // Chiama la funzione di ricerca
+        event.preventDefault();
+        ricercaNome();
     }
 });
 
 async function ricercaNome() {
-    document.getElementById("prodotti").innerHTML = "";
-    const nomeRicerca = document.getElementById("filtroNome").value.toLowerCase().trim();
-    document.getElementById("filtroNome").value = ""; // Pulisce il campo di ricerca dopo l'invio
-    document.getElementById("filtroNome").placeholder = "Cerca Prodotti...."; // Pulisce il campo di ricerca dopo l'invio
-    if (!nomeRicerca) {
-        const resultTutti = await restituisciTuttiProdotti();
-        stampaProdotti(resultTutti);
-    } else {
+
+    const filtroInput = document.getElementById("filtroNome");
+    const nomeRicerca = filtroInput.value.toLowerCase().trim();
+    if (nomeRicerca === "") {
+        filtroInput.value = "";
+        filtroInput.placeholder = "Cerca Prodotti....";
+
+        if (!nomeRicerca) {
+            const prodotti = await restituisciTuttiProdotti();
+            return stampaProdotti(prodotti);
+        }
         try {
             const response = await fetch("/ricercaProdottiNome", {
                 method: "POST",
@@ -118,9 +109,35 @@ async function ricercaNome() {
         } catch (error) {
             alert("Errore durante la ricerca dei prodotti: " + error.message);
         }
-    }
+ 
 }
 
+        try {
+            const response = await fetch("/ricercaProdottiNome", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ nome: nomeRicerca })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                stampaProdotti(result.prodotti);
+            } else {
+                alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
+                const prodotti = await restituisciTuttiProdotti();
+                stampaProdotti(prodotti);
+            }
+        } catch (error) {
+            alert("Errore durante la ricerca dei prodotti: " + error.message);
+        }
+    } else {
+        const prodotti = await restituisciTuttiProdotti();
+        return stampaProdotti(prodotti);
+    }
+}
 
 async function restituisciTuttiProdotti() {
     try {
@@ -130,8 +147,9 @@ async function restituisciTuttiProdotti() {
                 "Content-Type": "application/json"
             }
         });
+
         const result = await response.json();
-        return result;
+        return result.prodotti;
     } catch (error) {
         alert("Errore durante il recupero dei prodotti: " + error.message);
         return [];
@@ -139,50 +157,119 @@ async function restituisciTuttiProdotti() {
 }
 
 function stampaProdotti(prodotti) {
-    if (prodotti && Object.keys(prodotti).length > 0) {
-        const prodottiContainer = document.getElementById("prodotti");
-        const fragment = document.createDocumentFragment();
-        console.log("Prodotti ricevuti:", prodotti);
-        Object.values(prodotti).forEach(prodotto => {
-            const productDiv = document.createElement("div");
-            productDiv.className = "product";
-            productDiv.onclick = () => {
-                sessionStorage.setItem("idProduct", prodotto.id);
-                location.href = `InfoProdottoSpec.html?id=${prodotto.id},${email}`;
-            };
 
-            const img = document.createElement("img");
-            img.src = prodotto.immagine;
-            img.alt = prodotto.nome;
-            img.loading = "lazy"; // Lazy loading
-            productDiv.appendChild(img);
+    const container = document.getElementById("prodotti");
+    container.innerHTML = "";
 
-            const h3 = document.createElement("h3");
-            h3.textContent = prodotto.nome;
-            productDiv.appendChild(h3);
+    if (!prodotti || prodotti.length === 0) return;
 
-            const price = document.createElement("p");
-            price.innerHTML = `<strong> Prezzo: ${prodotto.prezzo} €</strong>`;
-            productDiv.appendChild(price);
+    const fragment = document.createDocumentFragment();
 
-            const btn = document.createElement("button");
-            btn.textContent = "Aggiungi al carrello";
+    prodotti.forEach(prodotto => {
+        const div = document.createElement("div");
+        div.className = "product";
+        div.onclick = () => {
+            sessionStorage.setItem("idProduct", prodotto.id);
+            location.href = `InfoProdottoSpec.html?idProdotto=${prodotto.id}&email=${idUtente}`;
+        };
 
-            if (prodotto.disponibilita <= 0) {  
-                btn.disabled = true;            
-                btn.textContent = "Non disponibile";
-            } else {
-                btn.onclick = (event) => {
-                    event.stopPropagation();
-                    aggiuntaProdottoCarrello(prodotto.id, email);
-                };
+        const img = document.createElement("img");
+        img.src = prodotto.immagine;
+        img.alt = prodotto.nome;
+        img.loading = "lazy";
+        div.appendChild(img);
+
+        const h3 = document.createElement("h3");
+        h3.textContent = prodotto.nome;
+        div.appendChild(h3);
+
+        const price = document.createElement("p");
+        price.innerHTML = `<strong> Prezzo: ${prodotto.prezzo} €</strong>`;
+        div.appendChild(price);
+
+        const btn = document.createElement("button");
+        if (prodotto.disponibilita === "0") {
+            btn.textContent = "Prodotto non disponibile";
+            btn.disabled = true;
+            btn.className = "disabled-button";
+        } else {
+            btn.textContent = "Aggiungi al Carrello";
+            btn.onclick = () => {
+                aggiuntaProdottoCarrello(idProdotto, email);
             }
-            productDiv.appendChild(btn);
+        }
+            div.appendChild(btn);
+            fragment.appendChild(div);
 
-            fragment.appendChild(productDiv);
         });
 
-        prodottiContainer.appendChild(fragment);
-        console.log("Prodotti stampati correttamente:", prodotti);
+    container.appendChild(fragment);
+}
+
+function applicaFiltri() {
+    const filtri = {
+        categoria: {
+            uomo: document.getElementById('genereUomo').checked,
+            donna: document.getElementById('genereDonna').checked,
+            bambino: document.getElementById('genereBambino').checked,
+            bambina: document.getElementById('genereBambina').checked,
+            unisex: document.getElementById('genereUni').checked
+        },
+        prezzo: {
+            crescente: document.getElementById('prezzoCrescente').checked,
+            decrescente: document.getElementById('prezzoDecrescente').checked
+        },
+        disponibilita: document.getElementById('disponibilità').checked
+    };
+
+    applicaFiltriProdotti(filtri);
+}
+
+async function applicaFiltriProdotti(filtri) {
+    const categorie = [];
+
+    if (filtri.categoria.uomo) categorie.push("'uomo'");
+    if (filtri.categoria.donna) categorie.push("'donna'");
+    if (filtri.categoria.bambino) categorie.push("'bambino'");
+    if (filtri.categoria.bambina) categorie.push("'bambina'");
+    if (filtri.categoria.unisex) categorie.push("'unisex'");
+
+    let prodotti = [];
+
+    try {
+        if (categorie.length > 0) {
+            const query = `SELECT * FROM prodotti WHERE categoria IN (${categorie.join(",")})`;
+            const response = await fetch("/prodottoByCategoria", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                prodotti = result.prodotti;
+            } else {
+                alert("Errore nel filtro per categoria: " + result.message);
+                return;
+            }
+        } else {
+            console.log(prodotti)
+            prodotti = await restituisciTuttiProdotti();
+        }
+
+        if (filtri.disponibilita) {
+            prodotti = prodotti.filter(p => p.disponibilita > 0);
+        }
+
+        if (filtri.prezzo.crescente) {
+            prodotti.sort((a, b) => a.prezzo - b.prezzo);
+        } else if (filtri.prezzo.decrescente) {
+            prodotti.sort((a, b) => b.prezzo - a.prezzo);
+        }
+        stampaProdotti(prodotti);
+        alert("Filtri applicati con successo!");
+    } catch (error) {
+        console.error("Errore nell'applicazione dei filtri:", error);
+        alert("Errore durante l'applicazione dei filtri: " + error.message);
     }
 }
