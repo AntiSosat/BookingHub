@@ -52,7 +52,6 @@ async function caricaDatiCliente(email) {
     alert("Si è verificato un errore durante il caricamento dei dati del cliente.");
   }
 }
-
 async function caricaStoricoOrdini(email) {
   const orderList = document.getElementById("order-history");
   if (!orderList) return;
@@ -97,12 +96,10 @@ async function caricaStoricoOrdini(email) {
 
       if (!Array.isArray(prodotti)) {
         console.error("Prodotti non validi o errore dal backend:", prodotti);
-        continue; // Skippa questo ordine per evitare crash
+        continue;
       }
 
       for (const item of prodotti) {
-        console.log("Item ricevuto:", item);  
-
         const prodottoId = item.prodotto;
         const quantita = item.quantita;
 
@@ -122,15 +119,23 @@ async function caricaStoricoOrdini(email) {
         }
       }
 
+      // Fetch del totale ordine UNA SOLA VOLTA per la card
+      const totaleRes = await fetch(`/ordine/totale?cliente=${email}&ordine=${ordineId}`);
+      const totaleData = await totaleRes.json();
+      const totale = totaleData.totale || 0;
+
+      const totaleDiv = document.createElement("div");
+      totaleDiv.classList.add("ordine-totale");
+      totaleDiv.textContent = `Totale ordine: €${totale}`;
 
       if (prodottiValidi > 0) {
         content.appendChild(ul);
+        content.appendChild(totaleDiv);
         ordineCard.appendChild(header);
         ordineCard.appendChild(content);
         ordersContainer.appendChild(ordineCard);
       }
     }
-
 
     orderList.appendChild(ordersContainer);
   } catch (error) {
@@ -232,6 +237,93 @@ async function caricaProdottiVenditore(email) {
 
   } catch (error) {
     console.error("Errore nel caricamento dei prodotti del venditore:", error);
+  }
+}
+
+async function caricaStoricoOrdiniArtigiano(email) {
+  const orderList = document.getElementById("order-history-artigiano");
+  if (!orderList) return;
+
+  try {
+    const ivaRes = await fetch(`/artigiano/iva-by-email?email=${email}`);
+    const ivaData = await ivaRes.json();
+    const ivaVenditore = ivaData.iva;
+
+    // Recupera tutti gli ordini dove il venditore è questo artigiano
+    const response = await fetch(`/ordine/venditore?ivavenditore=${ivaVenditore}`);
+    const ordini = await response.json();
+    console.log("Ordini trovati per artigiano:", ordini);
+    orderList.innerHTML = "";
+
+    if (!Array.isArray(ordini) || ordini.length === 0) {
+      orderList.innerHTML = `<div class="no-orders">
+        Nessun ordine trovato!<br><br>
+        Quando riceverai un ordine, lo troverai qui!
+      </div>`;
+      return;
+    }
+
+    const ordersContainer = document.createElement("div");
+    ordersContainer.classList.add("orders-container");
+
+    // Raggruppa per id ordine
+    const ordiniRaggruppati = {};
+    for (const o of ordini) {
+      if (!ordiniRaggruppati[o.id]) ordiniRaggruppati[o.id] = [];
+      ordiniRaggruppati[o.id].push(o);
+    }
+
+    for (const ordineId in ordiniRaggruppati) {
+      const ordineCard = document.createElement("div");
+      ordineCard.classList.add("ordine-card");
+
+      const header = document.createElement("div");
+      header.classList.add("ordine-header");
+      header.textContent = `Ordine #${ordineId}`;
+
+      const content = document.createElement("div");
+      content.classList.add("ordine-content");
+
+      header.addEventListener("click", () => {
+        content.classList.toggle("hidden");
+      });
+
+      const ul = document.createElement("ul");
+      let prodottiValidi = 0;
+      let totale = 0;
+
+      for (const item of ordiniRaggruppati[ordineId]) {
+        const prodottoId = item.prodotto;
+        const quantita = item.quantita;
+
+        const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
+        const prodottoInfo = await prodottoInfoRes.json();
+
+        if (prodottoInfo?.nome) {
+          const li = document.createElement("li");
+          li.textContent = `${prodottoInfo.nome} x${quantita}`;
+          ul.appendChild(li);
+          prodottiValidi++;
+          totale += (prodottoInfo.prezzo || 0) * (quantita || 1);
+        }
+      }
+
+      const totaleDiv = document.createElement("div");
+      totaleDiv.classList.add("ordine-totale");
+      totaleDiv.textContent = `Totale ordine: €${totale}`;
+
+      if (prodottiValidi > 0) {
+        content.appendChild(ul);
+        content.appendChild(totaleDiv);
+        ordineCard.appendChild(header);
+        ordineCard.appendChild(content);
+        ordersContainer.appendChild(ordineCard);
+      }
+    }
+
+    orderList.appendChild(ordersContainer);
+  } catch (error) {
+    console.error("Errore nel caricamento storico ordini artigiano:", error);
   }
 }
 
@@ -404,6 +496,7 @@ function caricaDatiUtente(email, tipo) {
       document.querySelectorAll(".artigiano-only").forEach(el => el.style.display = "block");
       caricaDatiVenditore(email);
       caricaProdottiVenditore(email);
+      caricaStoricoOrdiniArtigiano(email);
     }
   } catch (error) {
     console.error("Errore nel caricamento dati utente:", error);
