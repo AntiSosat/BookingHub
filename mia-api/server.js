@@ -5,6 +5,12 @@ const { get } = require('http');
 const app = express();
 app.use(express.json());
 
+//per le immagini 
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+
 // Connessione al database
 const client = new Client({
   user: 'postgres.ajexsiyipavyjrkseedr',
@@ -26,8 +32,8 @@ async function getOrdiniCliente(email) { //clienteId
 }
 
 async function getProdottiOrdine(clienteId, ordineId) {
-  const result = await client.query('SELECT prodotto FROM ordine WHERE cliente = $1 AND id = $2', [clienteId, ordineId]);
-  return result.rows.map(row => row.prodotto);
+  const result = await client.query('SELECT prodotto, quantita FROM ordine WHERE cliente = $1 AND id = $2', [clienteId, ordineId]);
+  return result.rows; //.rows.map(row => row.prodotto);
 }
 
 async function getClientOrdine(ordineId) {
@@ -161,6 +167,7 @@ async function getTotaleProdottiAcquistati(email) {
   return result.rows[0];
 }
 
+//per le stats
 async function getTotaleSpesaCliente(email) {
   const result = await client.query(`
     SELECT SUM(o.quantita * p.prezzo) AS totale_speso
@@ -170,6 +177,18 @@ async function getTotaleSpesaCliente(email) {
   `, [email]);
   return result.rows[0];
 }
+
+//per le card ordine
+async function getTotaleOrdine(clienteId, ordineId) {
+  const result = await client.query(`
+    SELECT SUM(o.quantita * p.prezzo) AS totale
+    FROM ordine o
+    JOIN prodotti p ON o.prodotto = p.id
+    WHERE o.cliente = $1 AND o.id = $2
+  `, [clienteId, ordineId]);
+  return result.rows[0]?.totale || 0;
+}
+
 
 // Funzioni per aggiungere dati
 app.get('/Cart/idProdotti', async (req, res) => {
@@ -310,53 +329,108 @@ app.post('/aggiungiProdotto', async (req, res) => {
 });
 
 //artigiano aggiungi prodotto
-app.post('/prodotto/aggiungi', async (req, res) => {
-  const { categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione } = req.body;
+// app.post('/prodotto/aggiungi', async (req, res) => {
+//   const { categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione } = req.body;
+
+//   try {
+//     const result = await client.query(`
+//       INSERT INTO prodotti (categoria, prezzo, disponibilita, ivavenditore, nome, immagine, descrizione)
+//       VALUES ($1, $2, $3, $4, $5, $6, $7)
+//       RETURNING *`,
+//       [categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione]
+//     );
+
+//     res.status(201).json(result.rows[0]);
+//   } catch (error) {
+//     console.error('Errore durante l\'aggiunta del prodotto:', error);
+//     res.status(500).json({ error: 'Errore interno del server.' });
+//   }
+// });
+app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
+  const { categoria, prezzo, disponibilita, idVenditore, nome, descrizione } = req.body;
+  let immagineBuffer = req.file ? req.file.buffer : null;
 
   try {
     const result = await client.query(`
       INSERT INTO prodotti (categoria, prezzo, disponibilita, ivavenditore, nome, immagine, descrizione)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`,
-      [categoria, prezzo, disponibilita, idVenditore, nome, immagine, descrizione]
+      [categoria, prezzo, disponibilita, idVenditore, nome, immagineBuffer, descrizione]
     );
-
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ success: true, prodotto: result.rows[0] });
   } catch (error) {
-    console.error('Errore durante l\'aggiunta del prodotto:', error);
+    console.error("Errore durante l'aggiunta del prodotto:", error);
     res.status(500).json({ error: 'Errore interno del server.' });
   }
 });
 
+
+
 //artigiano modifica prodotto
-app.put('/prodotto/modifica', async (req, res) => {
+// app.put('/prodotto/modifica', async (req, res) => {
+//   const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
+
+//   if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+//   try {
+//     const result = await client.query(`
+//       UPDATE prodotti
+//       SET nome = $1,
+//           prezzo = $2,
+//           disponibilita = $3,
+//           descrizione = $4,
+//           categoria = $5
+//       WHERE id = $6
+//       RETURNING *`,
+//       [nome, prezzo, disponibilita, descrizione, categoria, id]
+//     );
+
+//     if (result.rowCount === 0) {
+//       return res.status(404).json({ error: 'Prodotto non trovato' });
+//     }
+
+//     res.json(result.rows[0]);
+//   } catch (error) {
+//     console.error('Errore nella modifica del prodotto:', error);
+//     res.status(500).json({ error: 'Errore interno del server' });
+//   }
+// });
+app.put('/prodotto/modifica', upload.single('immagine'), async (req, res) => {
   const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
 
   if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
 
+  let query = `
+    UPDATE prodotti
+    SET nome = $1,
+        prezzo = $2,
+        disponibilita = $3,
+        descrizione = $4,
+        categoria = $5`;
+  const values = [nome, prezzo, disponibilita, descrizione, categoria];
+
+  if (req.file) {
+    query += `, immagine = $6 WHERE id = $7 RETURNING *`;
+    values.push(req.file.buffer, id);
+  } else {
+    query += ` WHERE id = $6 RETURNING *`;
+    values.push(id);
+  }
+
   try {
-    const result = await client.query(`
-      UPDATE prodotti
-      SET nome = $1,
-          prezzo = $2,
-          disponibilita = $3,
-          descrizione = $4,
-          categoria = $5
-      WHERE id = $6
-      RETURNING *`,
-      [nome, prezzo, disponibilita, descrizione, categoria, id]
-    );
+    const result = await client.query(query, values);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Prodotto non trovato' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ success: true, prodotto: result.rows[0] });
   } catch (error) {
     console.error('Errore nella modifica del prodotto:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
+
 
 //artigiano elimina prodotto
 app.delete('/prodotto/elimina', async (req, res) => {
@@ -614,6 +688,28 @@ app.post('/prodotti', async (req, res) => {
   }
 });
 
+app.get('/prodotti/disponibilita', async (req, res) => {
+  const disponibilita = req.query.disponibilita;
+
+  if (disponibilita === undefined) {
+    return res.status(400).json({ error: 'Parametro "disponibilita" mancante' });
+  }
+
+  try {
+    const result = await client.query(
+      'SELECT * FROM prodotti WHERE disponibilita >= $1',
+      [disponibilita]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Nessun prodotto trovato per questa disponibilità' });
+    }
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Errore nella query prodotti/disponibilita:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 /*app.post('/prodotti', async (req, res) => {
   try {
     const prodotti = await getProdotti();
@@ -842,18 +938,36 @@ app.get('/ordine/prodotti', async (req, res) => {
   }
 });
 
+// app.get('/ordine/venditore', async (req, res) => {
+//   const ordineId = req.query.id;
+//   if (!ordineId) {
+//     return res.status(400).json({ error: 'Parametro "id" mancante ' });
+//   }
+
+//   const result = await getVenditoriOrdine(ordineId);
+//   if (result.length === 0) {
+//     return res.status(404).json({ error: 'Ordine non trovato ' });
+//   }
+
+//   res.json({ venditore: result[0].venditore });
+// });
+
 app.get('/ordine/venditore', async (req, res) => {
-  const ordineId = req.query.id;
-  if (!ordineId) {
-    return res.status(400).json({ error: 'Parametro "id" mancante ' });
+  const ivaVenditore = req.query.ivavenditore;
+  if (!ivaVenditore) {
+    return res.status(400).json({ error: 'Parametro "ivavenditore" mancante' });
   }
 
-  const result = await getVenditoriOrdine(ordineId);
-  if (result.length === 0) {
-    return res.status(404).json({ error: 'Ordine non trovato ' });
+  try {
+    const result = await client.query(
+      'SELECT * FROM ordine WHERE venditore = $1',
+      [ivaVenditore]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Errore nella query ordini per venditore', err);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
-
-  res.json({ venditore: result[0].venditore });
 });
 
 app.get('/ordine/cliente', async (req, res) => {
@@ -1124,6 +1238,114 @@ app.post('/cart/svuotaCarrello', async (req, res) => {
   }
 });
 
+// app.post('/checkout', async (req, res) => {
+//   const { clienteId } = req.body;
+//   if (!clienteId) return res.status(400).json({ error: "Parametro clienteId mancante" });
+
+//   const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000).toString());
+
+
+//   try {
+//     const carrelloRes = await client.query(
+//       'SELECT idprodotto, quantita FROM cart WHERE emailcliente = $1',
+//       [clienteId]
+//     );
+//     const carrello = carrelloRes.rows;
+
+//     if (carrello.length === 0) {
+//       return res.status(400).json({ error: 'Carrello vuoto' });
+//     }
+
+//     for (const item of carrello) {
+//       const { idprodotto, quantita } = item;
+
+//       const venditoreRes = await client.query(
+//         'SELECT ivavenditore FROM prodotti WHERE id = $1',
+//         [idprodotto]
+//       );
+
+//       if (venditoreRes.rowCount === 0) continue;
+
+//       const venditore = venditoreRes.rows[0].ivavenditore;
+
+//       // Inserisci SEMPRE una nuova riga per ogni prodotto di questo ordine
+//       await client.query(
+//         'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+//         [ordineId, clienteId, venditore, idprodotto, quantita]
+//       );
+//     }
+
+//     // Svuota carrello dopo completamento
+//     await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
+
+//     res.json({ success: true, ordineId });
+//   } catch (error) {
+//     console.error("Errore durante il checkout:", error.message);
+//     res.status(500).json({ error: 'Errore interno server durante il checkout' });
+//   }
+// });
+app.post('/checkout', async (req, res) => {
+  const { clienteId } = req.body;
+  if (!clienteId) return res.status(400).json({ error: "Parametro clienteId mancante" });
+
+  const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000).toString());
+
+  try {
+    const carrelloRes = await client.query(
+      'SELECT idprodotto, quantita FROM cart WHERE emailcliente = $1',
+      [clienteId]
+    );
+    const carrello = carrelloRes.rows;
+
+    if (carrello.length === 0) {
+      return res.status(400).json({ error: 'Carrello vuoto' });
+    }
+
+    // 1. Controllo disponibilità per ogni prodotto
+    for (const item of carrello) {
+      const { idprodotto, quantita } = item;
+      const dispRes = await client.query(
+        'SELECT disponibilita FROM prodotti WHERE id = $1',
+        [idprodotto]
+      );
+      const disponibilita = dispRes.rows[0]?.disponibilita ?? 0;
+      if (quantita > disponibilita) {
+        return res.status(400).json({ error: `Disponibilità insufficiente per il prodotto ID ${idprodotto}` });
+      }
+    }
+
+    // 2. Procedi con l'inserimento dell'ordine e aggiorna la disponibilità
+    for (const item of carrello) {
+      const { idprodotto, quantita } = item;
+      const venditoreRes = await client.query(
+        'SELECT ivavenditore FROM prodotti WHERE id = $1',
+        [idprodotto]
+      );
+      if (venditoreRes.rowCount === 0) continue;
+      const venditore = venditoreRes.rows[0].ivavenditore;
+
+      await client.query(
+        'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+        [ordineId, clienteId, venditore, idprodotto, quantita]
+      );
+
+      // Aggiorna la disponibilità
+      await client.query(
+        'UPDATE prodotti SET disponibilita = disponibilita - $1 WHERE id = $2',
+        [quantita, idprodotto]
+      );
+    }
+
+    // Svuota carrello dopo completamento
+    await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
+
+    res.json({ success: true, ordineId });
+  } catch (error) {
+    console.error("Errore durante il checkout:", error.message);
+    res.status(500).json({ error: 'Errore interno server durante il checkout' });
+  }
+});
+
 //trova che utente sei 
 app.get('/utente/tipo', async (req, res) => {
   const email = req.query.email;
@@ -1177,6 +1399,21 @@ app.get('/stat/spesa', async (req, res) => {
   } catch (err) {
     console.error('Errore totale spesa:', err);
     res.status(500).json({ error: 'Errore server' });
+  }
+});
+
+app.get('/ordine/totale', async (req, res) => {
+  const clienteId = req.query.cliente;
+  const ordineId = req.query.ordine;
+  if (!clienteId || !ordineId) {
+    return res.status(400).json({ error: 'Parametri "cliente" e "ordine" mancanti' });
+  }
+  try {
+    const totale = await getTotaleOrdine(clienteId, ordineId);
+    res.json({ totale });
+  } catch (err) {
+    console.error('Errore nel calcolo totale ordine:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 

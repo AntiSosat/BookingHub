@@ -36,6 +36,8 @@
         </div>
       </section>
 
+
+
       <section class="card artigiano-only" style="display: none;">
         <div class="card-header card-success">Gestione Prodotti</div>
         <div class="card-body">
@@ -49,10 +51,12 @@
 
 
     <div class="side-column">
-      <section class="card cliente-only" style="display: none;">
+      <section class="card cliente-only card-storico" style="display: none;">
         <div class="card-header card-info">Storico Ordini</div>
-        <ul class="card-body" id="order-history"></ul>
+        <div class="card-body" id="order-history"></div> <!-- questo per il cliente-->
       </section>
+
+
 
       <section class="card artigiano-only" style="display: none;">
         <div class="card-header card-secondary">Monitoraggio Vendite</div>
@@ -61,6 +65,12 @@
           <p>🛒 Ordini ricevuti: <span id="cont-ordini">0</span></p>
         </div>
       </section>
+
+      <section class="card artigiano-only card-storico" style="display: none;">
+        <div class="card-header card-info">Storico Ordini Effettuati</div>
+        <div class="card-body" id="order-history-artigiano"></div> <!-- artigiano-->
+      </section>
+
     </div>
 
 
@@ -76,7 +86,7 @@
           <input type="number" id="disponibilita-nuovo" placeholder="Disponibilità" />
           <input type="text" id="descrizione-nuovo" placeholder="Descrizione" />
           <input type="text" id="categoria-nuovo" placeholder="Categoria" />
-          <input type="text" id="immagine-nuovo" placeholder="URL Immagine" />
+          <input type="file" id="immagine-nuovo" name="immagine" accept="image/*" placeholder="Immagine" />
           <button id="btn-salva-nuovo" class="btn btn-primary">Salva</button>
         </div>
 
@@ -88,7 +98,7 @@
           <input type="number" id="mod-disponibilita" placeholder="Modifica la disponibilità" />
           <input type="text" id="mod-descrizione" placeholder="Modifica la descrizione" />
           <input type="text" id="mod-categoria" placeholder="Modifica la categoria" />
-          <input type="text" id="mod-immagine" placeholder="Modifica l'immagine" />
+          <input type="file" id="mod-immagine" name="immagine" accept="image/*" placeholder="Modifica l'immagine" />
           <button id="btn-salva-modifica" class="btn btn-warning">Salva Modifica</button>
         </div>
 

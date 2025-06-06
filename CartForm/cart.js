@@ -83,23 +83,6 @@ async function modificaQuantitaCarrello(id, nuovaQuantita, email) {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-
-  // function getParametro() {
-  //   const urlParams = new URLSearchParams(window.location.search);
-  //   return urlParams.get('email') || urlParams.get('id'); // supporta entrambi
-  // }
-
-  // // 1. Leggo da URL
-  // const emailFromURL = getParametro();
-
-  // // 2. Se esiste, salvo in sessionStorage
-  // if (emailFromURL && emailFromURL !== "null") {
-  //   sessionStorage.setItem("email", emailFromURL);
-  // }
-
-  // // 3. Recupero SEMPRE da sessionStorage per usare nel resto del file
-  // const email = sessionStorage.getItem("email");
-
   function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
     let email = urlParams.get('id') || urlParams.get('email');
@@ -126,6 +109,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+
+  if (role =="artigiano"){
+    alert("Registrati come cliente per proseguire con gli acquisti");
+    window.location.href="../LoginForm/login-registration.html";
+    return
+  }
 
   console.log("Email attiva:", email);
 
@@ -289,14 +278,23 @@ async function pagaaaree() {
 
   const prodottiNelCarrello = document.querySelectorAll(".cart-item");
 
+  if (prodottiNelCarrello.length === 0) {
+    alert("Il carrello è vuoto.");
+    return;
+  }
+
   prodottiNelCarrello.forEach(item => {
     const nome = item.querySelector(".description").textContent;
-    const prezzo = parseFloat(item.querySelector(".price").textContent.replace("€", "").trim());
+    const prezzoTotale = parseFloat(item.querySelector(".price").textContent.replace("€", "").trim());
     const quantita = parseInt(item.querySelector(".qty-value").textContent, 10);
+    const prezzoUnitario = prezzoTotale / quantita;
+
     const li = document.createElement("li");
-    li.textContent = `${nome} x${quantita} - € ${(prezzo * quantita).toFixed(2)}`;
+    li.textContent = `${nome} x${quantita} - € ${(prezzoUnitario * quantita).toFixed(2)}`;
     popupSummary.appendChild(li);
-    totale += prezzo * quantita;
+
+    totale += prezzoUnitario * quantita;
+
   });
 
   const totalItem = document.createElement("li");
@@ -306,35 +304,42 @@ async function pagaaaree() {
 
   popup.classList.remove("hidden");
 
-  // Listener per chiudere popup e svuotare carrello lato server
-  document.getElementById("close-popup").addEventListener("click", async () => {
+  const closeBtn = document.getElementById("close-popup");
+  closeBtn.onclick = async () => {
     popup.classList.add("hidden");
 
-    // Usa "userEmail" se in getParametro salvi con questa chiave
     const email = sessionStorage.getItem("userEmail");
-    if (email) {
-      try {
-        const response = await fetch("/cart/svuotaCarrello", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ clienteId: email })
-        });
-
-        const data = await response.json();
-        if (!data.success) {
-          console.error("Errore nello svuotamento server:", data.error);
-        }
-      } catch (err) {
-        console.error("Errore nella chiamata a /cart/svuotaCarrello:", err);
-      }
+    if (!email) {
+      alert("Sessione scaduta, effettua nuovamente il login.");
+      window.location.href = "../LoginForm/login-registration.html";
+      return;
     }
 
-    // Svuota il frontend
-    document.querySelector(".cart-list").innerHTML = "";
-    document.querySelector(".cart-summary-wrapper").style.display = "none";
-    document.querySelector(".cart-empty").style.display = "block";
-  });
+    try {
+      const response = await fetch("/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clienteId: email })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        alert("Errore durante il pagamento: " + (result.error || "Contatta l'amministratore"));
+        return;
+      }
+
+      document.querySelector(".cart-list").innerHTML = "";
+      document.querySelector(".cart-summary-wrapper").style.display = "none";
+      document.querySelector(".cart-empty").style.display = "block";
+
+      alert("Pagamento completato con successo!");
+    } catch (error) {
+      console.error("Errore durante la conferma del pagamento:", error);
+      alert("Errore durante il pagamento. Riprova più tardi.");
+    }
+  };
 }
+
 
 
 

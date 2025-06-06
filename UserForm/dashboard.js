@@ -52,7 +52,6 @@ async function caricaDatiCliente(email) {
     alert("Si è verificato un errore durante il caricamento dei dati del cliente.");
   }
 }
-
 async function caricaStoricoOrdini(email) {
   const orderList = document.getElementById("order-history");
   if (!orderList) return;
@@ -67,7 +66,10 @@ async function caricaStoricoOrdini(email) {
     ordersContainer.classList.add("orders-container");
 
     if (!Array.isArray(uniqueOrdini) || uniqueOrdini.length === 0) {
-      orderList.innerHTML = "<li>Nessun ordine trovato</li>";
+      orderList.innerHTML = `<div class="no-orders">
+      Nessun ordine trovato!<br><br>
+         Quando effettuerai un acquisto, lo troverai qui!
+      </div>`;
       return;
     }
 
@@ -86,29 +88,53 @@ async function caricaStoricoOrdini(email) {
         content.classList.toggle("hidden");
       });
 
-      ordineCard.appendChild(header);
-
       const prodottiRes = await fetch(`/ordine/prodotti?cliente=${email}&ordine=${ordineId}`);
       const prodotti = await prodottiRes.json();
 
-      if (Array.isArray(prodotti) && prodotti.length > 0) {
-        const ul = document.createElement("ul");
-        for (const prodottoId of prodotti) {
-          const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
-          const prodottoInfo = await prodottoInfoRes.json();
-          const li = document.createElement("li");
-          li.textContent = prodottoInfo?.nome || 'NOME NON TROVATO';
-          ul.appendChild(li);
-        }
-        content.appendChild(ul);
-      } else {
-        const p = document.createElement("p");
-        p.textContent = "Nessun prodotto in questo ordine.";
-        content.appendChild(p);
+      const ul = document.createElement("ul");
+      let prodottiValidi = 0;
+
+      if (!Array.isArray(prodotti)) {
+        console.error("Prodotti non validi o errore dal backend:", prodotti);
+        continue;
       }
 
-      ordineCard.appendChild(content);
-      ordersContainer.appendChild(ordineCard);
+      for (const item of prodotti) {
+        const prodottoId = item.prodotto;
+        const quantita = item.quantita;
+
+        if (!prodottoId || quantita === undefined) {
+          console.warn("Quantità assente per prodotto", item);
+          continue;
+        }
+
+        const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
+        const prodottoInfo = await prodottoInfoRes.json();
+
+        if (prodottoInfo?.nome) {
+          const li = document.createElement("li");
+          li.textContent = `${prodottoInfo.nome} x${quantita}`;
+          ul.appendChild(li);
+          prodottiValidi++;
+        }
+      }
+
+      // Fetch del totale ordine UNA SOLA VOLTA per la card
+      const totaleRes = await fetch(`/ordine/totale?cliente=${email}&ordine=${ordineId}`);
+      const totaleData = await totaleRes.json();
+      const totale = totaleData.totale || 0;
+
+      const totaleDiv = document.createElement("div");
+      totaleDiv.classList.add("ordine-totale");
+      totaleDiv.textContent = `Totale ordine: €${totale}`;
+
+      if (prodottiValidi > 0) {
+        content.appendChild(ul);
+        content.appendChild(totaleDiv);
+        ordineCard.appendChild(header);
+        ordineCard.appendChild(content);
+        ordersContainer.appendChild(ordineCard);
+      }
     }
 
     orderList.appendChild(ordersContainer);
@@ -129,15 +155,32 @@ async function caricaStatisticheOrdini(email) {
       fetch(`/stat/spesa?cliente=${email}`).then(res => res.json())
     ]);
 
+    const numeroOrdini = ordini.numero_ordini || 0;
+    const totaleProdotti = prodotti.totale_prodotti || 0;
+    const totaleSpeso = spesa.totale_speso || 0;
+
     statistiche.innerHTML = `
-      <p>📦 Ordini effettuati: ${ordini.numero_ordini}</p>
-      <p>🛍️ Prodotti acquistati: ${prodotti.totale_prodotti}</p>
-      <p>💰 Totale speso: €${spesa.totale_speso}</p>
+      <p>📦 Ordini effettuati: ${numeroOrdini}</p>
+      <p>🛍️ Prodotti acquistati: ${totaleProdotti}</p>
+      <p>💰 Totale speso: €${totaleSpeso}</p>
     `;
+
+
+
+if (numeroOrdini === 0 && totaleProdotti === 0 && totaleSpeso === 0) {
+        document.getElementById("order-history").innerHTML =
+        "<p class='no-orders'>Non hai ancora effettuato ordini</p>";
+    }
+
+
   } catch (error) {
     console.error("Errore nel caricamento statistiche ordini:", error);
     alert("Si è verificato un errore durante il caricamento delle statistiche degli ordini.");
-    return;
+    statistiche.innerHTML = `
+      <p>📦 Ordini effettuati: 0</p>
+      <p>🛍️ Prodotti acquistati: 0</p>
+      <p>💰 Totale speso: €0.00</p>
+    `;;
   }
 }
 
@@ -197,6 +240,93 @@ async function caricaProdottiVenditore(email) {
   }
 }
 
+async function caricaStoricoOrdiniArtigiano(email) {
+  const orderList = document.getElementById("order-history-artigiano");
+  if (!orderList) return;
+
+  try {
+    const ivaRes = await fetch(`/artigiano/iva-by-email?email=${email}`);
+    const ivaData = await ivaRes.json();
+    const ivaVenditore = ivaData.iva;
+
+    // Recupera tutti gli ordini dove il venditore è questo artigiano
+    const response = await fetch(`/ordine/venditore?ivavenditore=${ivaVenditore}`);
+    const ordini = await response.json();
+    console.log("Ordini trovati per artigiano:", ordini);
+    orderList.innerHTML = "";
+
+    if (!Array.isArray(ordini) || ordini.length === 0) {
+      orderList.innerHTML = `<div class="no-orders">
+        Nessun ordine trovato!<br><br>
+        Quando riceverai un ordine, lo troverai qui!
+      </div>`;
+      return;
+    }
+
+    const ordersContainer = document.createElement("div");
+    ordersContainer.classList.add("orders-container");
+
+    // Raggruppa per id ordine
+    const ordiniRaggruppati = {};
+    for (const o of ordini) {
+      if (!ordiniRaggruppati[o.id]) ordiniRaggruppati[o.id] = [];
+      ordiniRaggruppati[o.id].push(o);
+    }
+
+    for (const ordineId in ordiniRaggruppati) {
+      const ordineCard = document.createElement("div");
+      ordineCard.classList.add("ordine-card");
+
+      const header = document.createElement("div");
+      header.classList.add("ordine-header");
+      header.textContent = `Ordine #${ordineId}`;
+
+      const content = document.createElement("div");
+      content.classList.add("ordine-content");
+
+      header.addEventListener("click", () => {
+        content.classList.toggle("hidden");
+      });
+
+      const ul = document.createElement("ul");
+      let prodottiValidi = 0;
+      let totale = 0;
+
+      for (const item of ordiniRaggruppati[ordineId]) {
+        const prodottoId = item.prodotto;
+        const quantita = item.quantita;
+
+        const prodottoInfoRes = await fetch(`/prodotto/dettagli?id=${prodottoId}`);
+        const prodottoInfo = await prodottoInfoRes.json();
+
+        if (prodottoInfo?.nome) {
+          const li = document.createElement("li");
+          li.textContent = `${prodottoInfo.nome} x${quantita}`;
+          ul.appendChild(li);
+          prodottiValidi++;
+          totale += (prodottoInfo.prezzo || 0) * (quantita || 1);
+        }
+      }
+
+      const totaleDiv = document.createElement("div");
+      totaleDiv.classList.add("ordine-totale");
+      totaleDiv.textContent = `Totale ordine: €${totale}`;
+
+      if (prodottiValidi > 0) {
+        content.appendChild(ul);
+        content.appendChild(totaleDiv);
+        ordineCard.appendChild(header);
+        ordineCard.appendChild(content);
+        ordersContainer.appendChild(ordineCard);
+      }
+    }
+
+    orderList.appendChild(ordersContainer);
+  } catch (error) {
+    console.error("Errore nel caricamento storico ordini artigiano:", error);
+  }
+}
+
 async function aggiungiProdotto(email) {
   try {
     const idVenditore = sessionStorage.getItem("ivaVenditore");
@@ -206,44 +336,44 @@ async function aggiungiProdotto(email) {
     const disponibilita = parseInt(document.getElementById("disponibilita-nuovo").value.trim());
     const descrizione = document.getElementById("descrizione-nuovo").value.trim();
     const categoria = document.getElementById("categoria-nuovo").value.trim();
-    const immagine = document.getElementById("immagine-nuovo").value.trim();
+    const immagine = document.getElementById("immagine-nuovo");
 
     if (!nome || isNaN(prezzo) || isNaN(disponibilita)) {
       alert("Compila tutti i campi obbligatori (nome, prezzo, disponibilità).");
       return;
     }
 
-    const prodotto = {
-      nome,
-      prezzo,
-      disponibilita,
-      descrizione,
-      categoria,
-      immagine,
-      idVenditore
-    };
+
+    const formData = new FormData();
+    formData.append("nome", nome);
+    formData.append("prezzo", prezzo);
+    formData.append("disponibilita", disponibilita);
+    formData.append("descrizione", descrizione);
+    formData.append("categoria", categoria);
+    formData.append("idVenditore", idVenditore);
+
+    if (immagine.files.length > 0) {
+      formData.append("immagine", immagine.files[0]);
+    }
 
     const res = await fetch("/prodotto/aggiungi", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(prodotto)
+      body: formData
     });
 
     const data = await res.json();
 
-    if (!res.ok) {
+    if (!res.ok || !data.success) {
       alert("Errore durante l'aggiunta del prodotto: " + (data.error || "Errore generico."));
       return;
     }
 
     alert("Prodotto aggiunto con successo!");
     document.getElementById("popup-prodotti").classList.add("hidden");
-    
+
     // Aggiorna il contatore dei prodotti
     await caricaDatiVenditore(email);
-    
+
   } catch (error) {
     console.error("Errore in aggiungiProdotto:", error);
     alert("Errore durante l'aggiunta del prodotto.");
@@ -275,25 +405,32 @@ async function modificaProdotto() {
   const prezzo = parseFloat(document.getElementById("mod-prezzo").value.trim());
   const disponibilita = parseInt(document.getElementById("mod-disponibilita").value.trim());
   const descrizione = document.getElementById("mod-descrizione").value.trim();
-  const categoria = document.getElementById("mod-categoria").value.trim();
-
+  const categoria = document.getElementById("mod-categoria");
   const modImgElem = document.getElementById("mod-immagine");
-  const immagineInput = modImgElem ? modImgElem.value.trim() : "";
+  const immagineInput = modImgElem;
 
-  let payload = { id, nome, prezzo, disponibilita, descrizione, categoria };
 
-  if (immagineInput !== "") {
-    payload.immagine = immagineInput;
+  const formData = new FormData();
+  formData.append("id", id);
+  formData.append("nome", nome);
+  formData.append("prezzo", prezzo);
+  formData.append("disponibilita", disponibilita);
+  formData.append("descrizione", descrizione);
+  formData.append("categoria", categoria);
+
+  if (immagineInput.files.length > 0) {
+    formData.append("immagine", immagineInput.files[0]);
   }
+
 
   const res = await fetch("/prodotto/modifica", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: formData
   });
 
   const data = await res.json();
-  if (!res.ok) {
+
+  if (!res.ok || !data.success) {
     alert("Errore: " + data.error);
     return;
   }
@@ -359,6 +496,7 @@ function caricaDatiUtente(email, tipo) {
       document.querySelectorAll(".artigiano-only").forEach(el => el.style.display = "block");
       caricaDatiVenditore(email);
       caricaProdottiVenditore(email);
+      caricaStoricoOrdiniArtigiano(email);
     }
   } catch (error) {
     console.error("Errore nel caricamento dati utente:", error);
@@ -369,7 +507,7 @@ function caricaDatiUtente(email, tipo) {
 document.addEventListener("DOMContentLoaded", async () => {
   const email = getParametro();
   const role = getUserRole();
-  
+
   try {
     if (!email || !role) {
       alert("Sessione non trovata. Effettua il login.");
@@ -406,7 +544,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       nascondiTuttiForms();
       document.getElementById("popup-title").textContent = "Visualizza Prodotti";
       document.getElementById("popup-prodotti").classList.remove("hidden");
-      
+
       const email = getParametro();
       await caricaProdottiVenditore(email);
     });
@@ -431,7 +569,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("popup-title").textContent = "Modifica Prodotti";
       document.getElementById("form-modifica").classList.remove("hidden");
       document.getElementById("popup-prodotti").classList.remove("hidden");
-      
+
       await popolaSelectModifica();
     });
 
@@ -452,7 +590,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("popup-title").textContent = "Elimina Prodotto";
       document.getElementById("form-elimina").classList.remove("hidden");
       document.getElementById("popup-prodotti").classList.remove("hidden");
-      
+
       await popolaSelectElimina();
     });
 
