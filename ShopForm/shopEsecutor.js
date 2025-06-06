@@ -41,6 +41,15 @@ function carrelloPersonale() {
 }
 
 async function aggiuntaProdottoCarrello(idProdotto, email) {
+
+    const resp = await fetch(`/prodotto/disponibilita?id=${idProdotto}`);
+    const data = await resp.json();
+    if (data.disponibilita <= 0) { 
+        alert("Prodotto esaurito");
+        return;
+    }
+
+
     try {
         const response = await fetch("/aggiungiProdottoCarrello", {
             method: "POST",
@@ -56,7 +65,7 @@ async function aggiuntaProdottoCarrello(idProdotto, email) {
         } else {
             alert("Errore nell'aggiunta del prodotto al carrello: " + data.message);
         }
-    } catch (error) { 
+    } catch (error) {
         console.error("Errore durante l'aggiunta del prodotto al carrello:", error);
         alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
     }
@@ -72,16 +81,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     const prodotti = await restituisciTuttiProdotti();
     stampaProdotti(prodotti);
-    
+
 });
- document.addEventListener("keydown", function(event) {
+document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
         event.preventDefault(); // Previene l'invio del form
         ricercaNome(); // Chiama la funzione di ricerca
     }
 });
 
- async function ricercaNome(){
+async function ricercaNome() {
     document.getElementById("prodotti").innerHTML = "";
     const nomeRicerca = document.getElementById("filtroNome").value.toLowerCase().trim();
     document.getElementById("filtroNome").value = ""; // Pulisce il campo di ricerca dopo l'invio
@@ -89,27 +98,28 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!nomeRicerca) {
         const resultTutti = await restituisciTuttiProdotti();
         stampaProdotti(resultTutti);
-    }else{
-    try {
-        const response = await fetch("/ricercaProdottiNome", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ nome: nomeRicerca })
-        });
-        const result = await response.json();
-        if(result.success){
-            stampaProdotti(result.prodotti);
-        }else{
-            alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
-            const resultTutti = await restituisciTuttiProdotti();
-            stampaProdotti(resultTutti);
+    } else {
+        try {
+            const response = await fetch("/ricercaProdottiNome", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ nome: nomeRicerca })
+            });
+            const result = await response.json();
+            if (result.success) {
+                stampaProdotti(result.prodotti);
+            } else {
+                alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
+                const resultTutti = await restituisciTuttiProdotti();
+                stampaProdotti(resultTutti);
+            }
+        } catch (error) {
+            alert("Errore durante la ricerca dei prodotti: " + error.message);
         }
-    } catch (error) {
-        alert("Errore durante la ricerca dei prodotti: " + error.message);
-    }}
- }
+    }
+}
 
 
 async function restituisciTuttiProdotti() {
@@ -157,10 +167,16 @@ function stampaProdotti(prodotti) {
 
             const btn = document.createElement("button");
             btn.textContent = "Aggiungi al carrello";
-            btn.onclick = (event) => {
-                event.stopPropagation();
-                aggiuntaProdottoCarrello(prodotto.id, email);
-            };
+
+            if (prodotto.disponibilita <= 0) {  
+                btn.disabled = true;            
+                btn.textContent = "Non disponibile";
+            } else {
+                btn.onclick = (event) => {
+                    event.stopPropagation();
+                    aggiuntaProdottoCarrello(prodotto.id, email);
+                };
+            }
             productDiv.appendChild(btn);
 
             fragment.appendChild(productDiv);

@@ -688,6 +688,28 @@ app.post('/prodotti', async (req, res) => {
   }
 });
 
+app.get('/prodotti/disponibilita', async (req, res) => {
+  const disponibilita = req.query.disponibilita;
+
+  if (disponibilita === undefined) {
+    return res.status(400).json({ error: 'Parametro "disponibilita" mancante' });
+  }
+
+  try {
+    const result = await client.query(
+      'SELECT * FROM prodotti WHERE disponibilita >= $1',
+      [disponibilita]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Nessun prodotto trovato per questa disponibilità' });
+    }
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Errore nella query prodotti/disponibilita:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 /*app.post('/prodotti', async (req, res) => {
   try {
     const prodotti = await getProdotti();
@@ -1171,12 +1193,57 @@ app.post('/cart/svuotaCarrello', async (req, res) => {
   }
 });
 
+// app.post('/checkout', async (req, res) => {
+//   const { clienteId } = req.body;
+//   if (!clienteId) return res.status(400).json({ error: "Parametro clienteId mancante" });
+
+//   const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000).toString());
+
+
+//   try {
+//     const carrelloRes = await client.query(
+//       'SELECT idprodotto, quantita FROM cart WHERE emailcliente = $1',
+//       [clienteId]
+//     );
+//     const carrello = carrelloRes.rows;
+
+//     if (carrello.length === 0) {
+//       return res.status(400).json({ error: 'Carrello vuoto' });
+//     }
+
+//     for (const item of carrello) {
+//       const { idprodotto, quantita } = item;
+
+//       const venditoreRes = await client.query(
+//         'SELECT ivavenditore FROM prodotti WHERE id = $1',
+//         [idprodotto]
+//       );
+
+//       if (venditoreRes.rowCount === 0) continue;
+
+//       const venditore = venditoreRes.rows[0].ivavenditore;
+
+//       // Inserisci SEMPRE una nuova riga per ogni prodotto di questo ordine
+//       await client.query(
+//         'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+//         [ordineId, clienteId, venditore, idprodotto, quantita]
+//       );
+//     }
+
+//     // Svuota carrello dopo completamento
+//     await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
+
+//     res.json({ success: true, ordineId });
+//   } catch (error) {
+//     console.error("Errore durante il checkout:", error.message);
+//     res.status(500).json({ error: 'Errore interno server durante il checkout' });
+//   }
+// });
 app.post('/checkout', async (req, res) => {
   const { clienteId } = req.body;
   if (!clienteId) return res.status(400).json({ error: "Parametro clienteId mancante" });
 
-const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000).toString());
-
+  const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000).toString());
 
   try {
     const carrelloRes = await client.query(
@@ -1189,56 +1256,40 @@ const ordineId = Number(Date.now().toString() + Math.floor(Math.random() * 1000)
       return res.status(400).json({ error: 'Carrello vuoto' });
     }
 
-    // for (const item of carrello) {
-    //   const { idprodotto, quantita } = item;
-
-    //   const venditoreRes = await client.query(
-    //     'SELECT ivavenditore FROM prodotti WHERE id = $1',
-    //     [idprodotto]
-    //   );
-
-    //   if (venditoreRes.rowCount === 0) continue;
-
-    //   const venditore = venditoreRes.rows[0].ivavenditore;
-
-    //   // Prova a fare insert, se fallisce per chiave duplicata fai update
-    //   try {
-    //     await client.query(
-    //       'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
-    //       [ordineId, clienteId, venditore, idprodotto, quantita]
-    //     );
-    //   } catch (insertError) {
-    //     if (insertError.code === '23505') {
-    //       // Chiave duplicata: aggiorna la quantità
-    //       await client.query(
-    //         'UPDATE ordine SET quantita = quantita + $1 WHERE prodotto = $2',
-    //         [quantita, idprodotto]
-    //       );
-    //     } else {
-    //       console.error("Errore durante INSERT:", insertError);
-    //       throw insertError;
-    //     }
-    //   }
-    // }
-
+    // 1. Controllo disponibilità per ogni prodotto
     for (const item of carrello) {
-  const { idprodotto, quantita } = item;
+      const { idprodotto, quantita } = item;
+      const dispRes = await client.query(
+        'SELECT disponibilita FROM prodotti WHERE id = $1',
+        [idprodotto]
+      );
+      const disponibilita = dispRes.rows[0]?.disponibilita ?? 0;
+      if (quantita > disponibilita) {
+        return res.status(400).json({ error: `Disponibilità insufficiente per il prodotto ID ${idprodotto}` });
+      }
+    }
 
-  const venditoreRes = await client.query(
-    'SELECT ivavenditore FROM prodotti WHERE id = $1',
-    [idprodotto]
-  );
+    // 2. Procedi con l'inserimento dell'ordine e aggiorna la disponibilità
+    for (const item of carrello) {
+      const { idprodotto, quantita } = item;
+      const venditoreRes = await client.query(
+        'SELECT ivavenditore FROM prodotti WHERE id = $1',
+        [idprodotto]
+      );
+      if (venditoreRes.rowCount === 0) continue;
+      const venditore = venditoreRes.rows[0].ivavenditore;
 
-  if (venditoreRes.rowCount === 0) continue;
+      await client.query(
+        'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
+        [ordineId, clienteId, venditore, idprodotto, quantita]
+      );
 
-  const venditore = venditoreRes.rows[0].ivavenditore;
-
-  // Inserisci SEMPRE una nuova riga per ogni prodotto di questo ordine
-  await client.query(
-    'INSERT INTO ordine (id, cliente, venditore, prodotto, quantita) VALUES ($1, $2, $3, $4, $5)',
-    [ordineId, clienteId, venditore, idprodotto, quantita]
-  );
-}
+      // Aggiorna la disponibilità
+      await client.query(
+        'UPDATE prodotti SET disponibilita = disponibilita - $1 WHERE id = $2',
+        [quantita, idprodotto]
+      );
+    }
 
     // Svuota carrello dopo completamento
     await client.query('DELETE FROM cart WHERE emailcliente = $1', [clienteId]);
