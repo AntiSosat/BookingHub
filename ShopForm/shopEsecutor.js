@@ -81,39 +81,39 @@ document.addEventListener("keydown", function (event) {
 async function ricercaNome() {
     const filtroInput = document.getElementById("filtroNome");
     const nomeRicerca = filtroInput.value.toLowerCase().trim();
-    if(nomeRicerca === "") {
-    filtroInput.value = "";
-    filtroInput.placeholder = "Cerca Prodotti....";
+    if (nomeRicerca === "") {
+        filtroInput.value = "";
+        filtroInput.placeholder = "Cerca Prodotti....";
 
-    if (!nomeRicerca) {
+        if (!nomeRicerca) {
+            const prodotti = await restituisciTuttiProdotti();
+            return stampaProdotti(prodotti);
+        }
+
+        try {
+            const response = await fetch("/ricercaProdottiNome", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ nome: nomeRicerca })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                stampaProdotti(result.prodotti);
+            } else {
+                alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
+                const prodotti = await restituisciTuttiProdotti();
+                stampaProdotti(prodotti);
+            }
+        } catch (error) {
+            alert("Errore durante la ricerca dei prodotti: " + error.message);
+        }
+    } else {
         const prodotti = await restituisciTuttiProdotti();
         return stampaProdotti(prodotti);
-    }
-
-    try {
-        const response = await fetch("/ricercaProdottiNome", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ nome: nomeRicerca })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            stampaProdotti(result.prodotti);
-        } else {
-            alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
-            const prodotti = await restituisciTuttiProdotti();
-            stampaProdotti(prodotti);
-        }
-    } catch (error) {
-        alert("Errore durante la ricerca dei prodotti: " + error.message);
-    }
-}else{
-    const prodotti = await restituisciTuttiProdotti();
-    return stampaProdotti(prodotti);
     }
 }
 
@@ -165,14 +165,19 @@ function stampaProdotti(prodotti) {
         div.appendChild(price);
 
         const btn = document.createElement("button");
-        btn.textContent = "Aggiungi al carrello";
-        btn.onclick = (event) => {
-            aggiuntaProdottoCarrello(prodotto.id, idUtente);
-        };
-        div.appendChild(btn);
-
-        fragment.appendChild(div);
-    });
+        if (prodotto.disponibilita === "0") {
+            btn.textContent = "Prodotto non disponibile";
+            btn.disabled = true;
+            btn.className = "disabled-button";
+        } else {
+            btn.textContent = "Aggiungi al Carrello";
+            btn.onclick = () => {
+                aggiuntaProdottoCarrello(idProdotto, email);
+            }
+        }
+            div.appendChild(btn);
+            fragment.appendChild(div);
+        });
 
     container.appendChild(fragment);
 }
