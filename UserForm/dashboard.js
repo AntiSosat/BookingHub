@@ -455,7 +455,7 @@ async function modificaProdotto() {
   const prezzo = parseFloat(document.getElementById("mod-prezzo").value.trim());
   const disponibilita = parseInt(document.getElementById("mod-disponibilita").value.trim());
   const descrizione = document.getElementById("mod-descrizione").value.trim();
-  const categoria = document.getElementById("mod-categoria");
+  const categoria = document.getElementById("mod-categoria").value.trim();
   const modImgElem = document.getElementById("mod-immagine");
   const immagineInput = modImgElem;
 
