@@ -625,16 +625,16 @@ app.post('/aggiungiProdottoCarrello', async (req, res) => {
     const result = await client.query(
       `UPDATE cart 
        SET quantita = quantita + 1 
-       WHERE idprodotto = $1 
+       WHERE idprodotto = $1 AND emailcliente = $2
        RETURNING *`,
-      [idProdotto]
+      [idProdotto, email]
     );
 
     if (result.rows.length === 0) {
       console.log("Prodotto non trovato nel carrello, lo aggiungo");
       try {
         const result = await client.query(
-          `INSERT INTO cart (idprodotto, quantita, emailCliente)
+          `INSERT INTO cart (idprodotto, quantita, emailcliente)
         VALUES ($1, $2, $3)
         RETURNING *`,
           [idProdotto, quantitaBase, email]

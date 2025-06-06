@@ -37,7 +37,7 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
     event.preventDefault(); 
 
     const iva = document.getElementById("pIva").value;
-    const email = document.getElementById("emailVend").value;
+    const emailAzienda = document.getElementById("emailVend").value;
     const password = document.getElementById("passVend").value;
     try {
         const response = await fetch("/loginArtigiano", {
@@ -45,7 +45,7 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
             headers: {
                 "Content-Type": "application/json"
             },  
-            body: JSON.stringify({ email, password, iva })
+            body: JSON.stringify({ emailAzienda, password, iva })
         });
 
         const result = await response.json();
@@ -57,9 +57,9 @@ document.getElementById("login-azienda").addEventListener("submit", async functi
             alert(result.message);
         } else {
             //window.location.href = `../ShopForm/shop.html?id=${email}`;
-            sessionStorage.setItem("userEmail", email);
+            sessionStorage.setItem("userEmail", emailAzienda);
             sessionStorage.setItem("userRole", "artigiano");
-            window.location.href = `../ShopForm/shop.html?id=${email}`;
+            window.location.href = `../ShopForm/shop.html?id=${emailAzienda}`;
         }
 
     } catch (error) {

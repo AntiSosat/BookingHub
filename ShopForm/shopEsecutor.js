@@ -1,5 +1,17 @@
 let idUtente;
 
+document.addEventListener("DOMContentLoaded", async function () {
+    idUtente = getParametro();
+    console.log("ID Utente:", idUtente);    
+    if (!idUtente) {
+        alert("Sessione non trovata. Effettua il login.");
+        location.href = "../LoginForm/login-registration.html";
+        return;
+    }
+    const prodotti = await restituisciTuttiProdotti();
+    stampaProdotti(prodotti);
+});
+
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
     idUtente = urlParams.get('userEmail');
@@ -43,7 +55,7 @@ async function aggiuntaProdottoCarrello(idProdotto, idUtente) {
             },
             body: JSON.stringify({ idProdotto, email: idUtente })
         });
-
+        console.log("Aggiunta prodotto al carrello:", { idProdotto, email: idUtente });
         const result = await response.json();
         console.log("Risultato dell'aggiunta al carrello:", result);
 
@@ -58,18 +70,6 @@ async function aggiuntaProdottoCarrello(idProdotto, idUtente) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", async function () {
-    const idUtente = getParametro();
-
-    if (!idUtente) {
-        alert("Sessione non trovata. Effettua il login.");
-        location.href = "../LoginForm/login-registration.html";
-        return;
-    }
-
-    const prodotti = await restituisciTuttiProdotti();
-    stampaProdotti(prodotti);
-});
 
 document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
@@ -166,7 +166,8 @@ function stampaProdotti(prodotti) {
             btn.className = "disabled-button";
         } else {
             btn.textContent = "Aggiungi al Carrello";
-            btn.onclick = () => {
+            btn.onclick = (event) => {
+                event.stopPropagation();
                 aggiuntaProdottoCarrello(prodotto.id, idUtente);
             };
         }
