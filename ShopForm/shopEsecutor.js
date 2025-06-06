@@ -34,16 +34,14 @@ function carrelloPersonale() {
     location.href = `../CartForm/cart.html?id=${idUtente}`;
 }
 
-
 async function aggiuntaProdottoCarrello(idProdotto, idUtente) {
-
     try {
         const response = await fetch("/aggiungiProdottoCarrello", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ idProdotto, email: idUtente }) // backend usa ancora "email"?
+            body: JSON.stringify({ idProdotto, email: idUtente })
         });
 
         const result = await response.json();
@@ -55,6 +53,7 @@ async function aggiuntaProdottoCarrello(idProdotto, idUtente) {
             alert("Errore nell'aggiunta del prodotto al carrello: " + result.message);
         }
     } catch (error) {
+        console.error("Errore durante l'aggiunta al carrello:", error);
         alert("Errore durante l'aggiunta del prodotto al carrello: " + error.message);
     }
 }
@@ -71,6 +70,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const prodotti = await restituisciTuttiProdotti();
     stampaProdotti(prodotti);
 });
+
 document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
         event.preventDefault();
@@ -79,39 +79,15 @@ document.addEventListener("keydown", function (event) {
 });
 
 async function ricercaNome() {
-
     const filtroInput = document.getElementById("filtroNome");
     const nomeRicerca = filtroInput.value.toLowerCase().trim();
     if (nomeRicerca === "") {
         filtroInput.value = "";
         filtroInput.placeholder = "Cerca Prodotti....";
 
-        if (!nomeRicerca) {
-            const prodotti = await restituisciTuttiProdotti();
-            return stampaProdotti(prodotti);
-        }
-        try {
-            const response = await fetch("/ricercaProdottiNome", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ nome: nomeRicerca })
-            });
-            const result = await response.json();
-            if (result.success) {
-                stampaProdotti(result.prodotti);
-            } else {
-                alert("Nessun prodotto trovato con il nome: " + nomeRicerca);
-                const resultTutti = await restituisciTuttiProdotti();
-                stampaProdotti(resultTutti);
-            }
-        } catch (error) {
-            alert("Errore durante la ricerca dei prodotti: " + error.message);
-        }
- 
-}
-
+        const prodotti = await restituisciTuttiProdotti();
+        return stampaProdotti(prodotti);
+    } else {
         try {
             const response = await fetch("/ricercaProdottiNome", {
                 method: "POST",
@@ -133,9 +109,6 @@ async function ricercaNome() {
         } catch (error) {
             alert("Errore durante la ricerca dei prodotti: " + error.message);
         }
-    } else {
-        const prodotti = await restituisciTuttiProdotti();
-        return stampaProdotti(prodotti);
     }
 }
 
@@ -157,7 +130,6 @@ async function restituisciTuttiProdotti() {
 }
 
 function stampaProdotti(prodotti) {
-
     const container = document.getElementById("prodotti");
     container.innerHTML = "";
 
@@ -195,13 +167,13 @@ function stampaProdotti(prodotti) {
         } else {
             btn.textContent = "Aggiungi al Carrello";
             btn.onclick = () => {
-                aggiuntaProdottoCarrello(idProdotto, email);
-            }
+                aggiuntaProdottoCarrello(prodotto.id, idUtente);
+            };
         }
-            div.appendChild(btn);
-            fragment.appendChild(div);
 
-        });
+        div.appendChild(btn);
+        fragment.appendChild(div);
+    });
 
     container.appendChild(fragment);
 }
@@ -253,7 +225,6 @@ async function applicaFiltriProdotti(filtri) {
                 return;
             }
         } else {
-            console.log(prodotti)
             prodotti = await restituisciTuttiProdotti();
         }
 
@@ -266,6 +237,7 @@ async function applicaFiltriProdotti(filtri) {
         } else if (filtri.prezzo.decrescente) {
             prodotti.sort((a, b) => b.prezzo - a.prezzo);
         }
+
         stampaProdotti(prodotti);
         alert("Filtri applicati con successo!");
     } catch (error) {
