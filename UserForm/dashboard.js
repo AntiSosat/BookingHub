@@ -126,7 +126,7 @@ async function caricaStoricoOrdini(email) {
 
       const totaleDiv = document.createElement("div");
       totaleDiv.classList.add("ordine-totale");
-      totaleDiv.textContent = `Totale ordine: €${totale}`;
+      totaleDiv.textContent = `Totale ordine: €${Number(totale).toFixed(2)}`;
 
       if (prodottiValidi > 0) {
         content.appendChild(ul);
@@ -162,7 +162,7 @@ async function caricaStatisticheOrdini(email) {
     statistiche.innerHTML = `
       <p>📦 Ordini effettuati: ${numeroOrdini}</p>
       <p>🛍️ Prodotti acquistati: ${totaleProdotti}</p>
-      <p>💰 Totale speso: €${totaleSpeso}</p>
+      <p>💰 Totale speso: €${Number(totaleSpeso).toFixed(2)}</p>
     `;
 
 
@@ -204,7 +204,11 @@ async function caricaDatiVenditore(email) {
 
     const prodotti = await fetch(`/prodotti/idvenditore?idvenditore=${info.iva}`).then(res => res.json());
     document.getElementById("cont-prodotti").textContent = prodotti.length;
-    document.getElementById("cont-ordini").textContent = "1";
+    
+    const ordiniRes = await fetch(`/ordine/venditore?ivavenditore=${info.iva}`);
+    const ordini = await ordiniRes.json();
+    const ordiniUnici = new Set(ordini.map(o => o.id));
+    document.getElementById("cont-ordini").textContent = ordiniUnici.size;
 
   } catch (error) {
     console.error("Errore nel caricamento dei dati del venditore:", error);
@@ -231,7 +235,7 @@ async function caricaProdottiVenditore(email) {
 
     prodotti.forEach(prod => {
       const li = document.createElement("li");
-      li.textContent = `${prod.nome} - €${prod.prezzo}`;
+      li.textContent = `${prod.nome} - €${Number(prod.prezzo).toFixed(2)}`;
       lista.appendChild(li);
     });
 
@@ -281,6 +285,38 @@ async function caricaStoricoOrdiniArtigiano(email) {
       header.classList.add("ordine-header");
       header.textContent = `Ordine #${ordineId}`;
 
+      // === Bottone elimina ordine ===
+      const eliminaBtn = document.createElement("button");
+      eliminaBtn.textContent = "Elimina Ordine";
+      eliminaBtn.classList.add("btn-elimina-ordine");
+      eliminaBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (confirm("Sei sicuro di voler eliminare questo ordine?")) {
+          const res = await fetch("/ordine/elimina", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ordineId })
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert("Ordine eliminato!");
+            ordineCard.remove();
+
+        if (ordersContainer.childElementCount === 0) {
+                orderList.innerHTML = `<div class="no-orders">
+                  Nessun ordine trovato!<br><br>
+                  Quando riceverai un ordine, lo troverai qui!
+                </div>`;
+              }
+
+          } else {
+            alert("Errore: " + (data.error || "Impossibile eliminare l'ordine"));
+          }
+        }
+      });
+      header.appendChild(eliminaBtn);
+      // === Fine bottone elimina ===
+
       const content = document.createElement("div");
       content.classList.add("ordine-content");
 
@@ -310,7 +346,7 @@ async function caricaStoricoOrdiniArtigiano(email) {
 
       const totaleDiv = document.createElement("div");
       totaleDiv.classList.add("ordine-totale");
-      totaleDiv.textContent = `Totale ordine: €${totale}`;
+      totaleDiv.textContent = `Totale ordine: €${Number(totale).toFixed(2)}`;
 
       if (prodottiValidi > 0) {
         content.appendChild(ul);
@@ -388,14 +424,28 @@ async function popolaSelectModifica() {
   const select = document.getElementById("select-modifica");
   select.innerHTML = "";
 
+  const optVuoto = document.createElement("option");
+  optVuoto.value = "";
+  optVuoto.textContent = "Seleziona un prodotto...";
+  select.appendChild(optVuoto);
+
+
   prodotti.forEach(prod => {
     const opt = document.createElement("option");
     opt.value = prod.id;
-    opt.textContent = `${prod.nome} - €${prod.prezzo}`;
+    opt.textContent = `${prod.nome} - €${Number(prod.prezzo).toFixed(2)}`;
     opt.dataset.json = JSON.stringify(prod);
     select.appendChild(opt);
   });
 
+  select.selectedIndex = 0;
+  // Svuota i campi sotto
+  document.getElementById("mod-nome").value = "";
+  document.getElementById("mod-prezzo").value = "";
+  document.getElementById("mod-disponibilita").value = "";
+  document.getElementById("mod-descrizione").value = "";
+  document.getElementById("mod-categoria").selectedIndex = 0;
+  document.getElementById("mod-immagine").value = "";
   select.dispatchEvent(new Event("change"));
 }
 
@@ -453,7 +503,7 @@ async function popolaSelectElimina() {
   prodotti.forEach(prod => {
     const opt = document.createElement("option");
     opt.value = prod.id;
-    opt.textContent = `${prod.nome} - €${prod.prezzo}`;
+    opt.textContent = `${prod.nome} - €${Number(prod.prezzo).toFixed(2)}`;
     select.appendChild(opt);
   });
 }
@@ -504,6 +554,21 @@ function caricaDatiUtente(email, tipo) {
   }
 }
 
+async function popolaCategoria(){
+  const categorie = ["uomo","donna","bambino","bambina","unisex"];
+  const selects = [document.getElementById("categoria-nuovo"), document.getElementById("mod-categoria")];
+  selects.forEach(select => {
+      if (!select) return;
+      select.innerHTML = "";
+      categorie.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const email = getParametro();
   const role = getUserRole();
@@ -539,6 +604,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     caricaDatiUtente(email, data.tipo);
 
+    popolaCategoria();
+
     // Event listeners per i bottoni del popup
     document.getElementById("view-products").addEventListener("click", async () => {
       nascondiTuttiForms();
@@ -555,7 +622,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("form-aggiungi").classList.remove("hidden");
       document.getElementById("popup-prodotti").classList.remove("hidden");
 
-      // Pulisci i campi del form
+      
       document.getElementById("nome-nuovo").value = "";
       document.getElementById("prezzo-nuovo").value = "";
       document.getElementById("disponibilita-nuovo").value = "";
@@ -569,6 +636,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("popup-title").textContent = "Modifica Prodotti";
       document.getElementById("form-modifica").classList.remove("hidden");
       document.getElementById("popup-prodotti").classList.remove("hidden");
+
+      document.getElementById("mod-nome").value = "";
+      document.getElementById("mod-prezzo").value = "";
+      document.getElementById("mod-disponibilita").value = "";
+      document.getElementById("mod-descrizione").value = "";
+      document.getElementById("mod-categoria").selectedIndex = 0;
+      document.getElementById("mod-immagine").value = "";
 
       await popolaSelectModifica();
     });

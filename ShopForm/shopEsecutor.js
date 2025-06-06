@@ -156,7 +156,7 @@ function stampaProdotti(prodotti) {
         div.appendChild(h3);
 
         const price = document.createElement("p");
-        price.innerHTML = `<strong> Prezzo: ${prodotto.prezzo} €</strong>`;
+        price.innerHTML = `<strong> Prezzo: ${Number(prodotto.prezzo).toFixed(2)} €</strong>`;
         div.appendChild(price);
 
         const btn = document.createElement("button");
