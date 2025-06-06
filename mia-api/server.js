@@ -346,9 +346,29 @@ app.post('/aggiungiProdotto', async (req, res) => {
 //     res.status(500).json({ error: 'Errore interno del server.' });
 //   }
 // });
+// app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
+//   const { categoria, prezzo, disponibilita, idVenditore, nome, descrizione } = req.body;
+//   let immagineBuffer = req.file ? req.file.buffer : null;
+
+//   try {
+//     const result = await client.query(`
+//       INSERT INTO prodotti (categoria, prezzo, disponibilita, ivavenditore, nome, immagine, descrizione)
+//       VALUES ($1, $2, $3, $4, $5, $6, $7)
+//       RETURNING *`,
+//       [categoria, prezzo, disponibilita, idVenditore, nome, immagineBuffer, descrizione]
+//     );
+//     res.status(201).json({ success: true, prodotto: result.rows[0] });
+//   } catch (error) {
+//     console.error("Errore durante l'aggiunta del prodotto:", error);
+//     res.status(500).json({ error: 'Errore interno del server.' });
+//   }
+// });
 app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
-  const { categoria, prezzo, disponibilita, idVenditore, nome, descrizione } = req.body;
+  let { categoria, prezzo, disponibilita, idVenditore, nome, descrizione } = req.body;
   let immagineBuffer = req.file ? req.file.buffer : null;
+
+  // Normalizza il prezzo: sostituisci la virgola con il punto e converti in float
+  prezzo = parseFloat(prezzo.replace(',', '.'));
 
   try {
     const result = await client.query(`
@@ -363,7 +383,6 @@ app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
     res.status(500).json({ error: 'Errore interno del server.' });
   }
 });
-
 
 
 //artigiano modifica prodotto
@@ -395,10 +414,51 @@ app.post('/prodotto/aggiungi', upload.single('immagine'), async (req, res) => {
 //     res.status(500).json({ error: 'Errore interno del server' });
 //   }
 // });
+
+// -----
+// app.put('/prodotto/modifica', upload.single('immagine'), async (req, res) => {
+//   const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
+
+//   if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+//   let query = `
+//     UPDATE prodotti
+//     SET nome = $1,
+//         prezzo = $2,
+//         disponibilita = $3,
+//         descrizione = $4,
+//         categoria = $5`;
+//   const values = [nome, prezzo, disponibilita, descrizione, categoria];
+
+//   if (req.file) {
+//     query += `, immagine = $6 WHERE id = $7 RETURNING *`;
+//     values.push(req.file.buffer, id);
+//   } else {
+//     query += ` WHERE id = $6 RETURNING *`;
+//     values.push(id);
+//   }
+
+//   try {
+//     const result = await client.query(query, values);
+
+//     if (result.rowCount === 0) {
+//       return res.status(404).json({ error: 'Prodotto non trovato' });
+//     }
+
+//     res.json({ success: true, prodotto: result.rows[0] });
+//   } catch (error) {
+//     console.error('Errore nella modifica del prodotto:', error);
+//     res.status(500).json({ error: 'Errore interno del server' });
+//   }
+// });
+
 app.put('/prodotto/modifica', upload.single('immagine'), async (req, res) => {
-  const { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
+  let { id, nome, prezzo, disponibilita, descrizione, categoria } = req.body;
 
   if (!id) return res.status(400).json({ error: 'Parametro "id" mancante' });
+
+  // Normalizza il prezzo: sostituisci la virgola con il punto e converti in float
+  prezzo = parseFloat(prezzo.replace(',', '.'));
 
   let query = `
     UPDATE prodotti
@@ -601,6 +661,22 @@ app.get('/ordine/cliente', async (req, res) => {
     res.json(ordini); // sarà [] se non ci sono ordini
   } catch (err) {
     console.error('Errore nella query cliente', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+app.delete('/ordine/elimina', async (req, res) => {
+  const { ordineId } = req.body;
+  if (!ordineId) return res.status(400).json({ error: 'Parametro "ordineId" mancante' });
+
+  try {
+    
+    const result = await client.query('DELETE FROM ordine WHERE id = $1 RETURNING *', [ordineId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Ordine non trovato' });
+
+    res.json({ success: true, eliminato: ordineId });
+  } catch (error) {
+    console.error('Errore durante l\'eliminazione ordine:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });

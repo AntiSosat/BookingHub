@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const price = document.createElement("p");
     price.className = "price";
-    price.textContent = prodottoSpecifico[0].prezzo + " €";
+    price.textContent = Number(prodottoSpecifico[0].prezzo).toFixed(2) + " €";
 
     // Pulsante acquisto
     let acquisto
