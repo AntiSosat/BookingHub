@@ -562,12 +562,12 @@ app.post('/loginCliente', async (req, res) => {
 
 
 app.post('/loginArtigiano', async (req, res) => {
-  const { email, password, iva } = req.body;
+  const { emailAzienda, password, iva } = req.body;
 
   try {
     const loginResult = await client.query(
       'SELECT 1 FROM login WHERE email = $1 AND password = $2',
-      [email, password]
+      [emailAzienda, password]
     );
 
     if (loginResult.rowCount === 0) {
@@ -576,7 +576,7 @@ app.post('/loginArtigiano', async (req, res) => {
 
     const artigianoResult = await client.query(
       'SELECT 1 FROM artigiano WHERE email = $1 AND iva = $2',
-      [email, iva]
+      [emailAzienda, iva]
     );
 
     if (artigianoResult.rowCount > 0) {
