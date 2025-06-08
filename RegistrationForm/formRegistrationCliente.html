@@ -84,7 +84,8 @@
                         // window.location.href = `../ShopForm/shop.html?id=${email}`;
                         sessionStorage.setItem("userEmail", email);
                         console.log("userEmail salvato in sessionStorage:", sessionStorage.getItem("userEmail"));
-                        window.location.href = "../ShopForm/shop.html";
+                        // window.location.href = "../ShopForm/shop.html";
+                        window.location.href = `../ShopForm/shop.html?id=${email}`;
 
                     } else {
                         alert(result.message);
