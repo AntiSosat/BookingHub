@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 function getParametro() {
     const urlParams = new URLSearchParams(window.location.search);
-    idUtente = urlParams.get('userEmail');
+    idUtente = urlParams.get('userEmail')|| urlParams.get('id');
 
     if (idUtente && idUtente !== "null") {
         sessionStorage.setItem("userEmail", idUtente);
